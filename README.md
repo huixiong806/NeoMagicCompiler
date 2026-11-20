@@ -1,166 +1,131 @@
-# Neo Magic Compiler
+# Neo Magic Compiler（`no_story` 分支）
 
-一个**编译原理教学游戏**：玩家从学习RISCV汇编开始，一路走到自己能写出一个把C子集语言编译成RISCV的编译器游戏。
+一个面向零基础玩家的**交互式编译原理教学游戏**：从认识寄存器与 RISC-V 汇编出发，经过 C 语言与核心数据结构训练、迷你指令翻译器实践，最终在本地用真正的 C 语言维护并完成一个将 C 子集编译到 RISC-V 汇编的完整编译器。
 
-四章共 53 关，全部带测例与参考解；引擎会用参考解逐关自检，
-保证"每一关都确实可解"（见下文《关卡自检》）。
+> **分支说明（`no_story`）**：本分支暂时移除所有剧情与世界观包装，专注于**游戏核心闭环、零基础可视化教学体验与网页化工程架构**的构建。后续剧情可作为独立叙事层叠加，不耦合核心玩法。
 
 ---
 
-## 世界观与术语
+## 核心设计理念
 
-本分支无剧情
+1. **零基础友好，靠图像和交互动画学习**：告别大段纯文字教程。每一关通过交互式动画（寄存器数据流动、内存格子、栈帧压弹、词法扫描传送带、AST 生长、小机器人执行）建立直觉，再动手写代码。
+2. **平滑的难度曲线与持续正面反馈**：单关只引入一个新概念，配套渐进式脚手架与分级提示；每次运行提供可视化状态变化与失败测例一键回放调试，通关即时点亮技能树与编译器流水线节点。
+3. **纯网页交互 + 本地真实工程联动**：放弃 `Tauri + mdBook` 方案，改用现代 Web 应用承载教学与可视化；前两章通过 **WebAssembly** 在浏览器零安装运行，后两章通过轻量本地桥接服务 **`nmc-bridge`** 自动识别本地 C 语言项目，实现**本地 IDE 写代码 + 网页端一键构建、测试、可视化调试**。
+4. **独立的通用 Playground**：提供独立的 Playground 页面（可自由沙盒实验，也可挂载任意关卡测例集），同时支持「在线编辑模式」与「本地项目模式」，贯穿全流程。
 
-## 四章内容
+---
 
-| 章 | 主题 | 关数 | 玩家写什么 |
-|----|------|:---:|-----------|
-| 第一章 | 星之语入门（RV32IM） | 15 | 星之语汇编 |
-| 第二章 | 逐渐抽象的魔法 | 14 | 星咒（C 子集） |
-| 第三章 | 简单的魔法翻译机 | 12 | 星之语程序：读字符流 → 扫描 → 求值 |
-| 第四章 | 魔导符的编织 | 12 | **写编译器**：星咒源码 → 星之语汇编 |
+## 四章学习路线
 
-第五章（多级 IR 与编译优化）只保留扩展能力，不在当前范围。
+| 章 | 主题 | 运行模式 | 玩家做什么 | 核心收获 |
+|----|------|----------|-----------|---------|
+| 第一章 | RISC-V 汇编入门（RV32IM） | 纯网页（WASM） | 编写 RISC-V 汇编指令 | 建立 CPU、寄存器、内存、分支、循环、栈与函数调用的底层直觉 |
+| 第二章 | C 语言与编译器前置基础 | 纯网页（WASM）/ 可选本地 | 编写 C 子集程序（可实时对照生成的汇编） | 掌握指针、字符串、结构体、递归、数组/树/符号表等写编译器必备技能 |
+| 第三章 | 迷你翻译器（装置脚本 → 装置指令） | **本地 C 项目 + 网页 Playground** | 用真实 C 语言实现小型脚本翻译器，驱动网页中的虚拟装置动画 | 零压力走通本地开发联动，首次完整体验「词法 → 语法 → 指令生成」 |
+| 第四章 | 真正的编译器（C 子集 → RISC-V 汇编） | **本地 C 项目 + 网页 Playground** | 持续迭代同一个本地 C 工程，逐关完成编译器各阶段并通过端到端运行验证 | 亲手产出能编译并运行真实程序的编译器 |
 
-## 项目结构
+第五章（多级 IR、优化 Pass 与性能评分）保留架构扩展能力，暂不在当前范围。
 
+---
+
+## 整体架构概览
+
+```text
+浏览器（Web SPA：关卡地图 / 交互动画教学 / 独立 Playground / 概念图鉴 Wiki）
+  ├── [模式 A：在线引擎]  crates/nmc-wasm（WebAssembly，零安装运行第 1~2 章与在线沙盒）
+  └── [模式 B：本地联动]  HTTP + WebSocket (127.0.0.1:17320)
+                              │
+                              ▼
+                     crates/nmc-bridge（本地轻量桥接服务）
+                      ├─ 识别本地 C 项目（nmc.project.json）与文件变动监听
+                      ├─ 调用本地 gcc / clang / make 构建玩家编译器
+                      ├─ 运行玩家编译器并捕获输出的 RISC-V 汇编（含超时/崩溃保护）
+                      └─ 交给核心引擎汇编、模拟执行与判定，推送可视化轨迹给网页
+                              │
+                              ▼
+                     crates/neomagic-core（复用现有领域层）
+                      ├─ crates/riscv-assembler（两遍扫描汇编器）
+                      ├─ crates/starlang（C 子集参考编译器）
+                      └─ crates/riscv-simulator（RV32IM 模拟器 + 历史回溯）
 ```
-├── compiler-content/            # 教学内容（mdBook 书 + 关卡三件套）
-│   ├── src/cN_M.md              #   关卡页：叙事 + ```riscv 块（编辑器配置 + 初始代码）
-│   ├── src/tests/cN_M.json      #   测例与判定配置
-│   ├── solutions/cN_M.s|.c      #   参考解（自检用它验证关卡可解）
-│   ├── frontend/                #   编辑器前端（TypeScript + Lit + Vite）
-│   └── book.toml                #   输出到 app/src/
-├── app/                         # Tauri 2 桌面应用
-│   ├── src/                     #   mdBook 构建产物（生成物，勿手改）
-│   └── src-tauri/               #   IPC 层（api.rs 逻辑 / dto.rs 接口 / lib.rs 转发）
+
+---
+
+## 规划中的项目结构
+
+```text
+├── web/                         # 现代 Web 前端（Vite + TypeScript + React/Tailwind）
+│   ├── src/pages/               #   关卡地图 / 关卡学习页 / 独立 Playground / Wiki 图鉴
+│   ├── src/visualizers/         #   交互式动画组件（CPU/内存/栈/词法/AST/迷你装置）
+│   └── src/engine/              #   统一执行适配器（自动切换 WASM 引擎 与 nmc-bridge）
+├── content/                     # 关卡与教学内容（从原 compiler-content/ 迁移演进）
+│   ├── levels/cN_M/             #   单关目录：meta.json + lesson.md + tests.json + solution.*
+│   ├── templates/               #   第 3~4 章本地 C 项目脚手架模板（含 nmc.project.json）
+│   └── wiki/                    #   按需查阅的交互式概念图鉴与参考算法卡片
 ├── crates/
-│   ├── riscv-simulator/         #   完整 RV32IM 模拟器 + MMIO + 历史回溯
-│   ├── riscv-assembler/         #   两遍扫描汇编器（伪指令、指示符、白名单）
-│   ├── starlang/                #   星咒 → 星之语 编译器
-│   └── neomagic-core/           #   领域层：关卡加载 / 运行器 / 判定器 / 存档 / 自检
-├── documents/                   # 设计文档（总设计 / 架构 / 关卡编写规范 / 开发流程 / 交接文档 / 术语表 / 存档格式）
-│   └── archive/                 #   早期设计文档（已被取代，只作历史参考）
-├── Makefile                     # 构建入口
+│   ├── riscv-simulator/         # [已有复用] 完整 RV32IM 模拟器 + MMIO + 历史回溯
+│   ├── riscv-assembler/         # [已有复用] 两遍扫描汇编器（伪指令、指示符、白名单）
+│   ├── starlang/                # [已有复用] C 子集 → RISC-V 汇编编译器
+│   ├── neomagic-core/           # [已有复用] 关卡加载 / 运行器 / 判定器 / 存档 / 自检
+│   ├── nmc-wasm/                # [规划新增] 面向浏览器的 WASM 绑定层
+│   └── nmc-bridge/              # [规划新增] 本地项目桥接守护进程（构建/监听/测试/调试）
+├── documents/                   # 设计与开发文档（详见下文索引）
+│   └── archive/                 #   早期历史文档（仅作归档参考）
+├── Makefile                     # 统一构建与自检入口
 └── README.md
 ```
 
-## 快速开始
-
-环境要求：**Node.js ≥ 18**、**Rust ≥ 1.75**、**mdBook ≥ 0.4**（`cargo install mdbook`）。
-
-```bash
-make smoke            # 环境自检：cargo / node / mdbook 都在吗
-make setup            # 安装 app/ 与 frontend/ 的 npm 依赖
-make dev              # 构建书 + 启动桌面版（推荐：玩游戏的完整形态）
-make book-serve       # 只预览教学内容（浏览器热更新，http://localhost:3000）
-make book-build       # 只构建书（前端 TS 编译 + mdBook）
-make test             # 关卡自检 + cargo test --workspace
-make book-test        # 只跑关卡自检（内容的守门人）
-make theme-check      # TypeScript 类型检查
-make check            # cargo check --workspace
-make release          # 打包桌面安装包
-```
-
-> **为什么不用 `mdbook test`**：它只会把**没标语言**的代码块当 Rust 去编译，
-> 而关卡页里的块是星之语汇编、token 序列、伪代码这类自定义文本，
-> 于是几十处都会报 `cannot find value`／`undeclared type` —— 那些报错没有意义。
-> 本项目内容层的守门人是**引擎自己的关卡自检**（见下节），
-> 它比"Rust 代码块能不能编译"有用得多。
-
-> 浏览器预览（`book-serve`）里编辑器可以写代码，但**运行 / 调试 / 判定需要在桌面版里**
-> （那些能力在 Rust 后端）。前端会明确提示这一点，不会静默失败。
-
-## 关卡自检：这个项目的质量底线
-
-```bash
-cargo test -p neomagic-core selfcheck -- --nocapture
-```
-
-它拿**每一关的参考解**去跑该关的全部测例。含义很直接：
-
-- 自检通过 → 这一关**至少有解**，测例与参考解自洽；
-- 自检失败 → 说明测例写错了或参考解写错了，**关卡不可解**，必须修。
-
-只检查某几关（写关卡时用）：
-
-```bash
-# Windows PowerShell
-$env:NMC_SELFCHECK="3-4,3-5,3-6"; cargo test -p neomagic-core selfcheck_only -- --nocapture
-# bash
-NMC_SELFCHECK=3-4,3-5,3-6 cargo test -p neomagic-core selfcheck_only -- --nocapture
-```
-
-> 仓库根的 `.cargo/config.toml` 设了 `[net] offline = true`：依赖全在本地缓存，
-> 构建不需要访问 crates.io。多个进程同时"更新索引"会全部堵在包缓存锁上，
-> 表现得像死锁（一堆 cargo、零个 rustc）—— 这个坑已经踩过一次。
-
-## 架构概要
-
-```
-mdBook HTML（关卡页，构建产物在 app/src/）
-  │  页面里注入 theme/dist/riscv-playground.js（Lit 组件）
-  │  window.__TAURI__.core.invoke(...)   ← 15 条 IPC 命令
-  ▼
-app/src-tauri/        Tauri 2 桌面壳
-  ├─ lib.rs           IPC 层：只做参数转发与错误包装（"薄"到每行只有一次调用）
-  ├─ api.rs           逻辑层：不依赖 Tauri，所以能被 cargo test 直接覆盖
-  └─ dto.rs           接口定义：与 frontend/src/core/types.ts 一一对应（全 camelCase）
-  ▼
-neomagic-core         领域层：关卡加载 / 运行 / 判定 / 存档 / 自检
-  ├─ riscv-assembler  星之语 → 机器码（两遍扫描）
-  ├─ starlang         星咒 → 星之语文本
-  └─ riscv-simulator  机器码 → 真的跑起来（MMIO / 系统调用 / 历史回溯）
-```
-
-关卡内容在**打包时嵌入二进制**（`crates/neomagic-core/build.rs` 生成清单，
-`embedded-content` 特性**默认开启**），所以装好的游戏不依赖仓库目录；
-开发时优先读磁盘，改完关卡重新构建就能看到。细节见
-[`documents/架构.md`](documents/架构.md)。
-
-## 文档入口
-
-| 文档 | 什么时候读 |
-|------|-----------|
-| [`documents/总设计.md`](documents/总设计.md) | **冻结的设计与大纲**：世界观、四章大纲、ISA、星咒规格、关卡 schema 的设计意图 |
-| [`documents/架构.md`](documents/架构.md) | **现在的实现**：五个 crate 的职责与边界、桌面壳三层分工、15 条 IPC 命令表、数据流、内容管线、两门验证机制、历史回溯设计、已发现的文档/实现差异 |
-| [`documents/关卡编写规范.md`](documents/关卡编写规范.md) | **写关卡**：三件套格式、测例 JSON 全字段、可用指令、以及一堆踩过的坑 |
-| [`documents/开发流程.md`](documents/开发流程.md) | **照着做就能跑起来**：环境要求、构建、测试、自检、写新关卡、提交规范、Windows 编码坑 |
-| [`documents/交接文档.md`](documents/交接文档.md) | **接手开发先读这份**：当前进度、下一步、常用命令、给子代理写简报的模板 |
-| [`documents/术语表.md`](documents/术语表.md) | 名词与标识符命名约定（跨文档对齐用） |
-| [`documents/存档格式.md`](documents/存档格式.md) | 要动 `user_progress.json` 或编辑器草稿格式时（跨运行的活契约） |
-
-早期设计文档（需求分析、软件架构、接口定义、需求进度、模块设计、关卡设计师指南）
-已被上面这几份取代，`git mv` 收进 [`documents/archive/`](documents/archive/README.md) 只作历史参考；
-取代关系与"哪些方案已废弃"见那份 README。
+> **关于原 `app/`（Tauri）与 `compiler-content/`（mdBook）**：现有 Rust 核心引擎与 53 关原型测例/参考解完整保留作为迁移基线；在网页版闭环跑通前暂不删除旧目录，待验证完成后再清理归档。
 
 ---
 
-## 给接手开发的 AI 的提示（项目发起人原始要求，保留备查）
+## 快速开始
 
-游戏应该包含下列内容：
+### 环境要求
 
-第一章 RiscV汇编语言教学关卡
+- **基础开发（前端 + 核心引擎）**：Node.js ≥ 18、Rust ≥ 1.75、`wasm-pack`（构建 WASM 引擎）。
+- **本地 C 项目联动（第 3~4 章）**：本机 C 工具链（`gcc` 或 `clang`，Windows 推荐 MSYS2 MinGW-w64）。
 
-第二章 C语言/必要算法教学关卡
+### 常用命令
 
-第三章 从零开始用C语言构建一个“sub compiler”，例如表达式计算器（但自己创新一下，不要真的用表达式计算器，太没创新了）
+```bash
+# 1. 运行核心引擎测试与关卡自检（内容质量底线）
+cargo test --workspace
+cargo test -p neomagic-core selfcheck -- --nocapture
 
-第四章 从零开始用C语言构建真正的编译器，词法分析->语法分析->AST生成->汇编生成，只追求功能正确，不追求性能。
+# 2. 只自检指定关卡
+NMC_SELFCHECK=1-1,1-2 cargo test -p neomagic-core selfcheck_only -- --nocapture
 
-第五章（暂时不需要开发，只是保留这扩展能力）多级IR以及编译优化。
+# 3. 启动网页前端（规划中，迁移完成后生效）
+cd web && npm install && npm run dev
 
-其他要求：
+# 4. 启动本地桥接服务并绑定本地 C 项目（规划中，第 3~4 章使用）
+cargo run -p nmc-bridge -- --project ./my-compiler
+```
 
-1. 先像专业的游戏策划师一样，做设计，再开始实现！！！要真正站在玩家角度考虑，做出可以理解并有趣的游戏。否则真的动工之后再想大改架构将会特别麻烦。关卡内容和顺序安排你自己决定，尤其是最后开发编译器使用的语言的知识范围，没教过的用法/算法不能莫名其妙出现。
-2. 包含完整顺畅的剧情，第四章结束剧情就可以收尾了，第五章开启新篇章。
-3. 做长期可维护的代码，不要可读性过差或者局部复杂性过高导致不可维护，注释用中文。
-4. 我们的项目如果没那么复杂，也不用浪费太多时间维护文档，当然你觉得文档有必要的话，最好还是有。
-5. git可以提交，不要提交敏感信息，不要破坏仓库。新开一个分支完成一切，不要对主分支做任何变动。
-6. 现在已有的内容还很简陋，不喜欢或者不能满足要求也可以推翻。
+> 仓库根的 `.cargo/config.toml` 配置了 `[net] offline = true` 以避免多进程构建争抢索引锁；若首次拉取新增 crate 依赖，可临时传 `--offline=false` 或更新本地缓存后再恢复。
 
-> 落实说明：第三章与第四章的"编译器"是**用星之语（汇编）写的**，
-> 而不是原始要求里的"C 语言"。理由：第四章的产物必须能被真正汇编执行，
-> 而星之语是本项目唯一有完整工具链的目标语言；玩家用星之语写编译器，
-> 也正好把第一、二章学的两门语言都用上。第三章则先用星之语把
-> "读字符流 → 扫描 → 求值"这条路走通，为第四章铺路。
+---
+
+## 关卡自检：不可妥协的质量底线
+
+本项目保留并强化**引擎关卡自检**机制：用每一关的参考解跑通该关全部测例。
+
+- 自检通过 → 关卡确定有解，测例与参考解自洽；
+- 编辑器约束与配置校验通过 → 不会出现锁死编辑区或提示行号越界等“测试绿但不可玩”的问题。
+
+第 3~4 章的本地 C 项目关卡同样遵循自检原则：由参考 C 编译器项目编译并执行端到端判定，确保每关设计真实可解。
+
+---
+
+## 文档导航
+
+| 文档 | 职责与适用场景 |
+|------|---------------|
+| [`documents/目标与形态.md`](documents/目标与形态.md) | **游戏总规划与闭环设计**：零基础教学体系、交互式动画规划、难度曲线、正面反馈、本地项目联动体验、分阶段路线图 |
+| [`documents/总设计.md`](documents/总设计.md) | **核心规格与四章大纲**：RV32IM ISA、C 子集规格、第 3 章迷你装置指令集、四章关卡大纲与 Judge 体系 |
+| [`documents/架构.md`](documents/架构.md) | **网页化与本地桥接技术架构**：Rust 核心复用、WASM 引擎、`nmc-bridge` 协议、`nmc.project.json`、独立 Playground 架构 |
+| [`documents/关卡编写规范.md`](documents/关卡编写规范.md) | **关卡编写指南**：无剧情版关卡结构、交互动画配置、分级提示、在线/本地双模式测例、RISC-V 避坑清单 |
+| [`documents/存档格式.md`](documents/存档格式.md) | **存档与同步契约**：浏览器端存储、导入导出、`nmc-bridge` 本地同步与项目状态记录 |
+| [`documents/开发流程.md`](documents/开发流程.md) | **开发与验证流程**：环境配置、构建测试、关卡自检、Windows 编码与提交规范 |
+| [`documents/交接文档.md`](documents/交接文档.md) | **项目交接与推进清单**：当前资产盘点、`no_story` 改造决策、下一步具体执行项 |
