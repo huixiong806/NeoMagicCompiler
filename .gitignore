@@ -1,0 +1,13 @@
+# Rust
+/target
+**/*.rs.bk
+
+# Web frontend
+web/node_modules
+web/dist
+web/src/wasm-pkg
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+*.swp

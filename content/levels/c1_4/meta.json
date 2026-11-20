@@ -1,0 +1,52 @@
+{
+  "id": "1-4",
+  "chapter": 1,
+  "order": 4,
+  "kind": "practice",
+  "title": "巩固实战：组合公式 3·t0 - t1 + 5",
+  "mode": "online",
+  "allowLocalFile": true,
+  "language": "asm",
+  "prerequisites": ["1-3"],
+  "concepts": ["composition", "temp-register", "preserve-inputs"],
+  "goalSummary": {
+    "before": "t0 与 t1 中存有输入整数，t3 为空闲暂存槽",
+    "after": "计算 t2 = 3 × t0 - t1 + 5，且保持 t0 与 t1 的原值不被修改"
+  },
+  "sandbox": {
+    "type": "manual-cpu",
+    "modules": ["regs", "constants", "alu"],
+    "recordToAsm": true,
+    "focusRegs": ["t0", "t1", "t2", "t3"],
+    "regRoles": {
+      "t0": "输入 A（勿改）",
+      "t1": "输入 B（勿改）",
+      "t2": "结果",
+      "t3": "草稿槽"
+    },
+    "constantCards": [
+      { "label": "5", "value": 5, "kind": "immediate" }
+    ],
+    "aluOps": ["+", "-"],
+    "allowCopy": true,
+    "warmupPuzzle": {
+      "prompt": "本关没有新指令！用 t3 当草稿纸，一步步算出 3 × t0(4) - t1(3) + 5 = 14 放入 t2，同时别改坏 t0 和 t1。",
+      "initial": {
+        "regs": { "t0": 4, "t1": 3, "t2": 0, "t3": 0 }
+      },
+      "goal": {
+        "regs": { "t0": 4, "t1": 3, "t2": 14 }
+      }
+    }
+  },
+  "editor": {
+    "readonlyPrefix": 1,
+    "readonlySuffix": 1
+  },
+  "hints": [
+    { "level": 1, "type": "diagram", "content": "没有乘法指令时，3 × t0 就是先算 2 × t0（t0 + t0），再加一次 t0。" },
+    { "level": 2, "type": "steps", "content": "1. t3 = t0 + t0；2. t3 = t3 + t0；3. t3 = t3 - t1；4. t2 = t3 + 5。全程不写回 t0 和 t1。" },
+    { "level": 3, "type": "snippet", "content": "add  t3, t0, t0\nadd  t3, t3, t0\nsub  t3, t3, t1\naddi t2, t3, 5" }
+  ],
+  "wikiRefs": ["rv32-arithmetic"]
+}

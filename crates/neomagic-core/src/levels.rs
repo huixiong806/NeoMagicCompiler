@@ -1,49 +1,68 @@
-//! 关卡文件：读取关卡页（Markdown）、测例（JSON）与参考解，并做自检。
+//! 关卡与 Wiki 加载器：从 `content/levels/cN_M/` 与 `content/wiki/` 读取结构化内容。
 //!
-//! 关卡目录约定（见 `documents/关卡编写规范.md`）：
+//! 单关目录约定（见 `documents/关卡编写规范.md`）：
 //!
 //! ```text
-//! compiler-content/src/cN_M.md          ← 关卡页：叙事 + ```riscv 块
-//! compiler-content/src/tests/cN_M.json  ← 测例
-//! compiler-content/solutions/cN_M.s|c   ← 参考解
+//! content/levels/c1_1/
+//!   ├── meta.json      ← 元信息、DAG 前置、沙盘配置、编辑约束、3 级提示
+//!   ├── lesson.md      ← 精简任务说明（≤300 字）
+//!   ├── starter.s|c    ← 初始脚手架代码
+//!   ├── tests.json     ← 测例、白名单、判定目标
+//!   └── solution.s|c   ← 参考解（引擎自检使用）
 //! ```
 
-use crate::config::Language;
-use crate::judge::judge;
+use crate::config::{Language, LevelConfig};
+use crate::judge::{judge, Verdict};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-/// 一个关卡的编辑器配置（`riscv` 块里的 JSON）。
-///
-/// 它会被**直接序列化给前端**（Tauri IPC），所以字段名是 camelCase、
-/// 正好对上 `compiler-content/frontend/src/core/types.ts` 里的 `EditorConfig`。
-#[derive(Debug, Clone, Default, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct EditorConfig {
-    pub level: String,
-    pub language: Language,
-    pub line_numbers: bool,
-    /// 前 N 行只读
-    pub readonly_prefix: usize,
-    /// 后 N 行只读
-    pub readonly_suffix: usize,
-    /// 隐藏行（1-based）
-    pub hidden: Vec<usize>,
-    /// 高亮行（1-based）
-    pub highlight: Vec<usize>,
-    /// 行号 → 提示文本
-    pub suggested: std::collections::BTreeMap<usize, String>,
-    /// 按钮显隐
-    pub toolbar: ToolbarConfig,
+/// 关卡节点类型：概念关 / 巩固关 / 硬核支线挑战关。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LevelKind {
+    #[default]
+    Lesson,
+    Practice,
+    Challenge,
 }
 
-#[derive(Debug, Clone, serde::Serialize)]
+/// 关卡顶部一句话目标卡（Before → After）。
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GoalSummary {
+    pub before: String,
+    pub after: String,
+}
+
+/// 按需展开的分级提示（1 思路 / 2 步骤 / 3 代码片段）。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HintItem {
+    pub level: u8,
+    #[serde(rename = "type")]
+    pub kind: String,
+    pub content: String,
+}
+
+/// 编辑器工具栏按钮配置。
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ToolbarConfig {
+    #[serde(default = "yes")]
     pub run: bool,
+    #[serde(default = "yes")]
     pub debug: bool,
+    #[serde(default = "yes")]
     pub submit: bool,
+    #[serde(default = "yes")]
     pub load: bool,
+    #[serde(default = "yes")]
     pub save: bool,
+}
+
+fn yes() -> bool {
+    true
 }
 
 impl Default for ToolbarConfig {
@@ -52,17 +71,86 @@ impl Default for ToolbarConfig {
     }
 }
 
-/// 一个关卡的静态数据（关卡页解析结果）。
-#[derive(Debug, Clone, Default)]
-pub struct LevelSource {
-    /// 关卡页路径。**嵌入内容后端下这是虚拟路径**（`<嵌入内容>/src/c1_1.md`），
-    /// 拿去读磁盘会读到空 —— 要正文请用 [`Self::page_text`]。
-    pub path: PathBuf,
-    /// 关卡页正文（Markdown 原文），前端用来显示关卡名/侧边栏标题。
-    pub page_text: String,
-    /// `riscv` 块里的编辑器配置
+/// 关卡编辑器约束配置（直接序列化给前端）。
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EditorConfig {
+    #[serde(default)]
+    pub level: String,
+    #[serde(default)]
+    pub language: Language,
+    #[serde(default = "yes")]
+    pub line_numbers: bool,
+    /// 前 N 行只读
+    #[serde(default)]
+    pub readonly_prefix: usize,
+    /// 后 N 行只读
+    #[serde(default)]
+    pub readonly_suffix: usize,
+    /// 隐藏行（1-based）
+    #[serde(default)]
+    pub hidden: Vec<usize>,
+    /// 高亮行（1-based）
+    #[serde(default)]
+    pub highlight: Vec<usize>,
+    /// 行号（1-based）→ 提示文本
+    #[serde(default)]
+    pub suggested: BTreeMap<usize, String>,
+    /// 工具栏显隐
+    #[serde(default)]
+    pub toolbar: ToolbarConfig,
+}
+
+/// 单关 `meta.json` 完整元信息。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LevelMeta {
+    pub id: String,
+    pub chapter: u32,
+    /// 章内排序键（支持小数，例如 `4.5` 表示挂在 `1-4` 旁的支线 `1-4S`）
+    #[serde(default)]
+    pub order: f64,
+    #[serde(default)]
+    pub kind: LevelKind,
+    pub title: String,
+    #[serde(default = "default_mode")]
+    pub mode: String,
+    #[serde(default)]
+    pub allow_local_file: bool,
+    #[serde(default)]
+    pub language: Language,
+    /// DAG 前置依赖关卡 ID 列表
+    #[serde(default)]
+    pub prerequisites: Vec<String>,
+    /// 可选最优指令条数挑战指标（含程序全部机器码指令）
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub par_instructions: Option<usize>,
+    #[serde(default)]
+    pub concepts: Vec<String>,
+    #[serde(default)]
+    pub goal_summary: GoalSummary,
+    /// 数据驱动沙盘配置（保持 JSON 开放结构，便于 4 套沙盘独立演进）
+    #[serde(default)]
+    pub sandbox: serde_json::Value,
+    #[serde(default)]
     pub editor: EditorConfig,
-    /// `riscv` 块里 `---` 之后的初始代码
+    #[serde(default)]
+    pub hints: Vec<HintItem>,
+    #[serde(default)]
+    pub wiki_refs: Vec<String>,
+}
+
+fn default_mode() -> String {
+    "online".to_string()
+}
+
+/// 单关的静态教学内容（`meta.json` + `lesson.md` + `starter`）。
+#[derive(Debug, Clone)]
+pub struct LevelSource {
+    pub dir: PathBuf,
+    pub meta: LevelMeta,
+    pub lesson_markdown: String,
+    pub editor: EditorConfig,
     pub initial_code: String,
 }
 
@@ -70,11 +158,8 @@ pub struct LevelSource {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LevelError {
     NotFound(String),
-    /// 关卡页的 `riscv` 块 JSON 坏了
-    BadEditorConfig { path: PathBuf, message: String },
-    /// 测例文件读不到或解析失败
+    BadMeta { path: PathBuf, message: String },
     BadTestConfig { path: PathBuf, message: String },
-    /// 解析出的 level 与文件名对不上
     LevelIdMismatch { expected: String, actual: String },
 }
 
@@ -82,50 +167,41 @@ impl std::fmt::Display for LevelError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             LevelError::NotFound(id) => write!(f, "找不到关卡 {}", id),
-            LevelError::BadEditorConfig { path, message } => {
-                write!(f, "{} 的编辑器配置有问题：{}", path.display(), message)
+            LevelError::BadMeta { path, message } => {
+                write!(f, "{} 的元数据有问题：{}", path.display(), message)
             }
             LevelError::BadTestConfig { path, message } => {
                 write!(f, "{} 的测例有问题：{}", path.display(), message)
             }
             LevelError::LevelIdMismatch { expected, actual } => {
-                write!(f, "关卡 ID 不一致：文件名是 {}，配置里写的是 {}", expected, actual)
+                write!(f, "关卡 ID 不一致：期望 {}，配置里写的是 {}", expected, actual)
             }
         }
     }
 }
 
-/// 一个关卡的完整数据（页面 + 测例 + 参考解）。
+/// 单关完整数据包（元数据 + 正文 + 初始代码 + 测例 + 参考解）。
 #[derive(Debug, Clone)]
 pub struct LevelBundle {
     pub id: String,
     pub source: LevelSource,
-    pub config: crate::config::LevelConfig,
-    /// 参考解源码（没有则 None）
+    pub config: LevelConfig,
     pub solution: Option<String>,
 }
 
-/// 关卡目录（默认是仓库里的 `compiler-content`）。
-///
-/// 内容可以来自**文件系统**（开发时：改完关卡刷新就能看到），也可以来自
-/// **编译期嵌入的字节**（打包后的游戏：玩家机器上没有仓库目录）。
-/// 这个差异全部收在 [`Content`] 里，上层的加载逻辑完全一样。
+/// 关卡与 Wiki 仓库（支持磁盘目录与编译期嵌入双后端）。
 #[derive(Debug, Clone)]
 pub struct LevelStore {
     content: Content,
 }
 
-/// 内容后端。
 #[derive(Debug, Clone)]
 enum Content {
-    /// 磁盘上的 `compiler-content`
     Dir(PathBuf),
-    /// 嵌进二进制的关卡内容（`crates/neomagic-core/build.rs` 生成）
     Embedded,
 }
 
 impl Content {
-    /// `rel` 是相对 `compiler-content/` 的路径，例如 `src/c1_1.md`。
     fn read(&self, rel: &str) -> Option<String> {
         match self {
             Content::Dir(root) => std::fs::read_to_string(root.join(rel)).ok(),
@@ -142,51 +218,75 @@ impl Content {
         }
     }
 
-    /// 全部关卡（章节号, 关号）。
-    ///
-    /// 注意这里保留**文件名里的原始数字串**（`c3_01.md` → `("3", "01")`），
-    /// 因为测例文件名必须和关卡页同名；早期版本把 `01` 归一成 `1` 再拼
-    /// `c3_1.json`，于是带前导零的关卡在嵌入内容里整批消失。
-    fn level_files(&self) -> Vec<(String, String)> {
-        let mut found: Vec<(u32, u32, String, String)> = Vec::new();
-        let mut take = |name: &str| {
-            if let Some((cn, mn, cs, ms)) = parse_level_file_name(name) {
-                found.push((cn, mn, cs, ms));
-            }
-        };
+    /// 枚举 `levels/` 下所有包含 `meta.json` 与 `tests.json` 的关卡目录名（如 `c1_1`、`c1_4s`）。
+    fn level_dirs(&self) -> Vec<String> {
+        let mut dirs: BTreeSet<String> = BTreeSet::new();
         match self {
             Content::Dir(root) => {
-                let Ok(entries) = std::fs::read_dir(root.join("src")) else { return Vec::new() };
-                for e in entries.flatten() {
-                    take(&e.file_name().to_string_lossy());
+                let Ok(entries) = std::fs::read_dir(root.join("levels")) else {
+                    return Vec::new();
+                };
+                for entry in entries.flatten() {
+                    if entry.path().is_dir() {
+                        let name = entry.file_name().to_string_lossy().to_string();
+                        if self.exists(&format!("levels/{}/meta.json", name))
+                            && self.exists(&format!("levels/{}/tests.json", name))
+                        {
+                            dirs.insert(name);
+                        }
+                    }
                 }
             }
             Content::Embedded => {
                 for rel in crate::embedded::paths() {
-                    // 只要 `src/` 下的关卡页，跳过 `src/tests/...` 与其它文件
-                    let Some(name) = rel.strip_prefix("src/") else { continue };
-                    if name.contains('/') {
-                        continue;
+                    let Some(rest) = rel.strip_prefix("levels/") else { continue };
+                    let Some((dir, file)) = rest.split_once('/') else { continue };
+                    if file == "meta.json" && self.exists(&format!("levels/{}/tests.json", dir)) {
+                        dirs.insert(dir.to_string());
                     }
-                    take(name);
                 }
             }
         }
-        // 只有"关卡页 + 测例"都齐了才算一关
-        found.retain(|(_, _, c, m)| self.exists(&format!("src/tests/c{}_{}.json", c, m)));
-        found.sort();
-        found.dedup();
-        found.into_iter().map(|(_, _, c, m)| (c, m)).collect()
+        dirs.into_iter().collect()
+    }
+
+    /// 枚举 `wiki/` 下所有词条名（不含 `.md` 后缀）。
+    fn wiki_topics(&self) -> Vec<String> {
+        let mut topics: BTreeSet<String> = BTreeSet::new();
+        match self {
+            Content::Dir(root) => {
+                let Ok(entries) = std::fs::read_dir(root.join("wiki")) else {
+                    return Vec::new();
+                };
+                for entry in entries.flatten() {
+                    let name = entry.file_name().to_string_lossy().to_string();
+                    if let Some(stem) = name.strip_suffix(".md") {
+                        topics.insert(stem.to_string());
+                    }
+                }
+            }
+            Content::Embedded => {
+                for rel in crate::embedded::paths() {
+                    let Some(name) = rel.strip_prefix("wiki/") else { continue };
+                    if !name.contains('/') {
+                        if let Some(stem) = name.strip_suffix(".md") {
+                            topics.insert(stem.to_string());
+                        }
+                    }
+                }
+            }
+        }
+        topics.into_iter().collect()
     }
 }
 
 impl LevelStore {
-    /// 用 `compiler-content` 目录构造。
+    /// 用 `content` 目录构造。
     pub fn new(content_dir: impl Into<PathBuf>) -> Self {
         Self { content: Content::Dir(content_dir.into()) }
     }
 
-    /// 用**编译期嵌入**的关卡内容构造（需要 `embedded-content` 特性）。
+    /// 用编译期嵌入的内容构造（供 WASM 与单文件分发使用）。
     pub fn embedded() -> Self {
         assert!(
             cfg!(feature = "embedded-content"),
@@ -195,33 +295,29 @@ impl LevelStore {
         Self { content: Content::Embedded }
     }
 
-    /// 从仓库根目录推断（向上找 `compiler-content`）。
+    /// 从仓库根路径定位 `content/`。
     pub fn from_repo_root(root: impl AsRef<Path>) -> Self {
-        Self::new(root.as_ref().join("compiler-content"))
+        Self::new(root.as_ref().join("content"))
     }
 
-    /// 定位当前仓库（编译期已知的 `CARGO_MANIFEST_DIR` 往上两级）。
+    /// 定位当前仓库的 `content/` 目录。
     pub fn default_repo() -> Self {
         let here = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        // crates/neomagic-core → 仓库根
         let root = here.parent().and_then(|p| p.parent()).unwrap_or(&here).to_path_buf();
         Self::from_repo_root(root)
     }
 
-    /// 开发时优先读仓库里的文件；仓库不在（= 装好的游戏）就读嵌入内容。
-    ///
-    /// 这条"先盘后嵌"的顺序是刻意的：作者改完关卡立刻能在游戏里看到，
-    /// 不用重新编译 Rust。
+    /// 开发时优先读磁盘目录，打包环境自动回退编译期嵌入内容。
     pub fn prefer_repo_or_embedded() -> Self {
         let store = Self::default_repo();
-        if store.content_root().join("src").is_dir() {
+        if store.content_root().join("levels").is_dir() {
             store
         } else {
             Self::embedded()
         }
     }
 
-    /// 内容根目录；嵌入内容时给一个人可读的占位。
+    /// 内容根目录（嵌入模式下返回可读占位）。
     pub fn content_root(&self) -> PathBuf {
         match &self.content {
             Content::Dir(d) => d.clone(),
@@ -229,57 +325,91 @@ impl LevelStore {
         }
     }
 
-    /// 兼容旧名字。
     pub fn content_dir(&self) -> PathBuf {
         self.content_root()
     }
 
-    /// 全部关卡 ID（按章节与关号排序）。
+    /// 返回按 `(chapter, order, id)` 排好序的全部关卡 ID。
     pub fn level_ids(&self) -> Vec<String> {
-        self.content
-            .level_files()
-            .into_iter()
-            .map(|(c, m)| format!("{}-{}", c, m))
-            .collect()
+        let mut items: Vec<(u32, i64, String)> = Vec::new();
+        for dir in self.content.level_dirs() {
+            let rel = format!("levels/{}/meta.json", dir);
+            let Some(text) = self.content.read(&rel) else { continue };
+            let Ok(meta) = serde_json::from_str::<LevelMeta>(&text) else { continue };
+            let order_key = (meta.order * 1000.0).round() as i64;
+            items.push((meta.chapter, order_key, meta.id));
+        }
+        items.sort_by(|a, b| (a.0, a.1, &a.2).cmp(&(b.0, b.1, &b.2)));
+        items.into_iter().map(|(_, _, id)| id).collect()
     }
 
-    fn page_rel(&self, id: &str) -> String {
-        let (c, m) = split_level_id(id);
-        format!("src/c{}_{}.md", c, m)
+    /// 全部关卡 ID（别名）。
+    pub fn all(&self) -> Vec<String> {
+        self.level_ids()
     }
 
-    fn test_rel(&self, id: &str) -> String {
-        let (c, m) = split_level_id(id);
-        format!("src/tests/c{}_{}.json", c, m)
+    /// 关卡 ID（如 `"1-4S"`）对应的目录名（如 `"c1_4s"`）。
+    fn dir_name(id: &str) -> String {
+        format!("c{}", id.to_ascii_lowercase().replace('-', "_"))
     }
 
-    fn solution_rel(&self, id: &str, lang: Language) -> String {
-        let (c, m) = split_level_id(id);
-        let ext = match lang {
-            Language::Asm => "s",
-            Language::C => "c",
-        };
-        format!("solutions/c{}_{}.{}", c, m, ext)
-    }
-
-    /// 读取关卡页并解析 `riscv` 块。
+    /// 读取关卡元信息与静态页面/初始代码。
     pub fn load_source(&self, id: &str) -> Result<LevelSource, LevelError> {
-        let rel = self.page_rel(id);
-        let path = self.content_root().join(&rel);
-        let Some(text) = self.content.read(&rel) else {
+        let dir_name = Self::dir_name(id);
+        let meta_rel = format!("levels/{}/meta.json", dir_name);
+        let meta_path = self.content_root().join(&meta_rel);
+        let Some(meta_text) = self.content.read(&meta_rel) else {
             return Err(LevelError::NotFound(id.to_string()));
         };
-        parse_level_page(&text, id, &path)
+        let mut meta: LevelMeta = serde_json::from_str(&meta_text).map_err(|e| {
+            LevelError::BadMeta { path: meta_path.clone(), message: e.to_string() }
+        })?;
+        if meta.id != id {
+            return Err(LevelError::LevelIdMismatch {
+                expected: id.to_string(),
+                actual: meta.id,
+            });
+        }
+
+        // 补齐 editor 中的冗余字段，确保前后端一致
+        meta.editor.level = meta.id.clone();
+        meta.editor.language = meta.language;
+
+        let lesson_markdown = self
+            .content
+            .read(&format!("levels/{}/lesson.md", dir_name))
+            .unwrap_or_default()
+            .replace("\r\n", "\n");
+
+        let ext = language_ext(meta.language);
+        let mut initial_code = self
+            .content
+            .read(&format!("levels/{}/starter.{}", dir_name, ext))
+            .unwrap_or_default()
+            .replace("\r\n", "\n");
+        while initial_code.ends_with('\n') {
+            initial_code.pop();
+        }
+
+        let editor = meta.editor.clone();
+        Ok(LevelSource {
+            dir: self.content_root().join(format!("levels/{}", dir_name)),
+            meta,
+            lesson_markdown,
+            editor,
+            initial_code,
+        })
     }
 
-    /// 读取测例配置。
-    pub fn load_config(&self, id: &str) -> Result<crate::config::LevelConfig, LevelError> {
-        let rel = self.test_rel(id);
+    /// 读取测例与判定配置。
+    pub fn load_config(&self, id: &str) -> Result<LevelConfig, LevelError> {
+        let dir_name = Self::dir_name(id);
+        let rel = format!("levels/{}/tests.json", dir_name);
         let path = self.content_root().join(&rel);
         let Some(text) = self.content.read(&rel) else {
             return Err(LevelError::NotFound(id.to_string()));
         };
-        let cfg = crate::config::LevelConfig::parse(&text).map_err(|e| LevelError::BadTestConfig {
+        let cfg = LevelConfig::parse(&text).map_err(|e| LevelError::BadTestConfig {
             path: path.clone(),
             message: e,
         })?;
@@ -292,162 +422,61 @@ impl LevelStore {
         Ok(cfg)
     }
 
-    /// 加载一个关卡的完整数据。
+    /// 加载单关完整数据包。
     pub fn load(&self, id: &str) -> Result<LevelBundle, LevelError> {
         let source = self.load_source(id)?;
         let mut config = self.load_config(id)?;
-        if config.language == Language::Asm && source.editor.language == Language::C {
+        if config.language == Language::Asm && source.meta.language == Language::C {
             config.language = Language::C;
         }
-        let solution = self.content.read(&self.solution_rel(id, config.language));
+        let ext = language_ext(config.language);
+        let sol_rel = format!("levels/{}/solution.{}", Self::dir_name(id), ext);
+        let solution = self.content.read(&sol_rel).map(|s| s.replace("\r\n", "\n"));
         Ok(LevelBundle { id: id.to_string(), source, config, solution })
     }
 
-    /// 全部关卡的 ID（与 [`Self::level_ids`] 相同，语义更清楚）。
-    pub fn all(&self) -> Vec<String> {
-        self.level_ids()
+    /// 构建全仓关卡的 DAG 前置映射（`level_id -> prerequisites`）。
+    pub fn prerequisite_map(&self) -> BTreeMap<String, Vec<String>> {
+        let mut map = BTreeMap::new();
+        for id in self.level_ids() {
+            if let Ok(src) = self.load_source(&id) {
+                map.insert(id, src.meta.prerequisites);
+            }
+        }
+        map
     }
 
-    /// **关卡自检**：用参考解跑一遍这个关卡的判定，看是否通过。
-    ///
-    /// 返回 `Ok(verdict)` 表示自检跑完了（`verdict.passed` 才是"关卡可解"）；
-    /// 返回 `Err` 表示连关卡文件/参考解都没齐。
-    pub fn self_check(&self, id: &str) -> Result<crate::judge::Verdict, String> {
+    /// 枚举全部 Wiki 词条 ID。
+    pub fn wiki_topics(&self) -> Vec<String> {
+        self.content.wiki_topics()
+    }
+
+    /// 读取单篇 Wiki 词条 Markdown 原文。
+    pub fn load_wiki(&self, topic: &str) -> Option<String> {
+        self.content
+            .read(&format!("wiki/{}.md", topic))
+            .map(|s| s.replace("\r\n", "\n"))
+    }
+
+    /// 关卡自检：用参考解跑一遍判定确认可解。
+    pub fn self_check(&self, id: &str) -> Result<Verdict, String> {
         let bundle = self.load(id).map_err(|e| e.to_string())?;
         let Some(solution) = &bundle.solution else {
             return Err(format!(
-                "关卡 {} 没有参考解（应该放在 compiler-content/solutions/c{}_{}.{}）",
+                "关卡 {} 没有参考解（应放在 content/levels/{}/solution.{}）",
                 id,
-                split_level_id(id).0,
-                split_level_id(id).1,
-                if bundle.config.language == Language::C { "c" } else { "s" }
+                Self::dir_name(id),
+                language_ext(bundle.config.language)
             ));
         };
         Ok(judge(&bundle.config, solution))
     }
 }
 
-/// 解析关卡页：找出第一个 ```` ```riscv ```` 块，拆出 JSON 配置与初始代码。
-pub fn parse_level_page(text: &str, id: &str, path: &Path) -> Result<LevelSource, LevelError> {
-    let normalized = text.replace("\r\n", "\n");
-    let mut in_block = false;
-    let mut block_lines: Vec<&str> = Vec::new();
-    for line in normalized.lines() {
-        let trimmed = line.trim_end();
-        if !in_block {
-            if trimmed.trim_start().starts_with("```riscv") {
-                in_block = true;
-            }
-            continue;
-        }
-        if trimmed.trim_start().starts_with("```") {
-            break;
-        }
-        block_lines.push(line);
-    }
-    if block_lines.is_empty() {
-        return Err(LevelError::BadEditorConfig {
-            path: path.to_path_buf(),
-            message: format!("关卡 {} 里没有找到 ```riscv 代码块", id),
-        });
-    }
-
-    // 用 `---` 单独成行切分配置与代码
-    let sep = block_lines.iter().position(|l| l.trim() == "---");
-    let (json_text, code_lines): (String, &[&str]) = match sep {
-        Some(i) => (block_lines[..i].join("\n"), &block_lines[i + 1..]),
-        None => {
-            // 兼容：以最后一个 `}` 为界
-            let joined = block_lines.join("\n");
-            match joined.rfind('}') {
-                Some(pos) => (joined[..=pos].to_string(), &[]),
-                None => (String::new(), &block_lines[..]),
-            }
-        }
-    };
-
-    let mut editor = EditorConfig { level: id.to_string(), line_numbers: true, ..Default::default() };
-    if !json_text.trim().is_empty() {
-        let v: serde_json::Value = serde_json::from_str(&json_text).map_err(|e| {
-            LevelError::BadEditorConfig { path: path.to_path_buf(), message: e.to_string() }
-        })?;
-        if let Some(l) = v.get("level").and_then(|x| x.as_str()) {
-            editor.level = l.to_string();
-        }
-        if let Some(l) = v.get("language").and_then(|x| x.as_str()) {
-            editor.language = Language::parse(l).ok_or_else(|| LevelError::BadEditorConfig {
-                path: path.to_path_buf(),
-                message: format!("language 只能是 \"asm\" 或 \"c\"（写的是 {}）", l),
-            })?;
-        }
-        if let Some(b) = v.get("lineNumbers").and_then(|x| x.as_bool()) {
-            editor.line_numbers = b;
-        }
-        if let Some(c) = v.get("constraints") {
-            if let Some(n) = c.get("readonlyPrefix").and_then(|x| x.as_u64()) {
-                editor.readonly_prefix = n as usize;
-            }
-            if let Some(n) = c.get("readonlySuffix").and_then(|x| x.as_u64()) {
-                editor.readonly_suffix = n as usize;
-            }
-            editor.hidden = int_list(c.get("hidden"));
-            editor.highlight = int_list(c.get("highlight"));
-            if let Some(s) = c.get("suggested").and_then(|x| x.as_object()) {
-                for (k, val) in s {
-                    if let (Ok(line), Some(txt)) = (k.parse::<usize>(), val.as_str()) {
-                        editor.suggested.insert(line, txt.to_string());
-                    }
-                }
-            }
-        }
-        if let Some(t) = v.get("toolbar") {
-            let get = |k: &str| t.get(k).and_then(|x| x.as_bool()).unwrap_or(true);
-            editor.toolbar = ToolbarConfig {
-                run: get("run"),
-                debug: get("debug"),
-                submit: get("submit"),
-                load: get("load"),
-                save: get("save"),
-            };
-        }
-    }
-
-    // 初始代码：去掉尾部空行
-    let mut code = code_lines.join("\n");
-    while code.ends_with('\n') {
-        code.pop();
-    }
-
-    Ok(LevelSource {
-        path: path.to_path_buf(),
-        page_text: text.to_string(),
-        editor,
-        initial_code: code,
-    })
-}
-
-fn int_list(v: Option<&serde_json::Value>) -> Vec<usize> {
-    v.and_then(|x| x.as_array())
-        .map(|a| a.iter().filter_map(|x| x.as_u64()).map(|x| x as usize).collect())
-        .unwrap_or_default()
-}
-
-/// 从 `c1_5.md` 这样的文件名解析出 `(1, 5, "1", "5")`。
-///
-/// 前两个是**用于排序**的数值，后两个是**文件名里的原始数字串**（可能带前导零，
-/// 例如 `c3_01.md`）—— 拼测例/参考解路径时必须用原始串。
-fn parse_level_file_name(name: &str) -> Option<(u32, u32, String, String)> {
-    let stem = name.strip_suffix(".md")?;
-    let rest = stem.strip_prefix('c')?;
-    let (a, b) = rest.split_once('_')?;
-    Some((a.parse().ok()?, b.parse().ok()?, a.to_string(), b.to_string()))
-}
-
-/// `"1-5"` → `("1", "5")`（保持原样字符串，避免前导零问题）。
-fn split_level_id(id: &str) -> (String, String) {
-    match id.split_once('-') {
-        Some((a, b)) => (a.to_string(), b.to_string()),
-        None => (id.to_string(), "1".to_string()),
+fn language_ext(lang: Language) -> &'static str {
+    match lang {
+        Language::Asm => "s",
+        Language::C => "c",
     }
 }
 
@@ -455,77 +484,25 @@ fn split_level_id(id: &str) -> (String, String) {
 mod tests {
     use super::*;
 
-    const PAGE: &str = r#"
-## 1.5 记忆晶阵
-
-这里讲一段故事。
-
-```riscv
-{
-  "level": "1-5",
-  "constraints": { "readonlyPrefix": 1, "suggested": { "3": "lw x5, 0(x1)" } }
-}
----
-# 把数读进来
-li x1, 0x1000
-lw x5, 0(x1)
-ecall
-```
-
-后面还有别的文字。
-
-```riscv
-{ "level": "不该被读到" }
-```
-"#;
-
     #[test]
-    fn parses_editor_config_and_initial_code() {
-        let src = parse_level_page(PAGE, "1-5", Path::new("x.md")).unwrap();
-        assert_eq!(src.editor.level, "1-5");
-        assert_eq!(src.editor.readonly_prefix, 1);
-        assert_eq!(src.editor.suggested.get(&3).map(|s| s.as_str()), Some("lw x5, 0(x1)"));
-        assert!(src.initial_code.contains("li x1, 0x1000"));
-        assert!(!src.initial_code.contains("ecall\n\n"), "尾部空行要去掉");
-        assert!(!src.initial_code.contains("不该被读到"), "只取第一个 riscv 块");
+    fn dir_name_handles_main_and_side_levels() {
+        assert_eq!(LevelStore::dir_name("1-1"), "c1_1");
+        assert_eq!(LevelStore::dir_name("1-4S"), "c1_4s");
+        assert_eq!(LevelStore::dir_name("1-7S"), "c1_7s");
     }
 
     #[test]
-    fn missing_block_is_reported() {
-        let e = parse_level_page("没有代码块的页面", "1-1", Path::new("x.md")).unwrap_err();
-        assert!(matches!(e, LevelError::BadEditorConfig { .. }));
-    }
-
-    #[test]
-    fn bad_json_is_reported() {
-        let text = "```riscv\n{ 这不是 JSON\n---\nnop\n```\n";
-        let e = parse_level_page(text, "1-1", Path::new("x.md")).unwrap_err();
-        assert!(matches!(e, LevelError::BadEditorConfig { .. }));
-    }
-
-    #[test]
-    fn level_file_names_are_parsed() {
-        // 返回四元组：(章节号, 关号, 原始章节串, 原始关号串)
-        assert_eq!(
-            parse_level_file_name("c1_5.md"),
-            Some((1, 5, "1".to_string(), "5".to_string()))
-        );
-        assert_eq!(
-            parse_level_file_name("c12_3.md"),
-            Some((12, 3, "12".to_string(), "3".to_string()))
-        );
-        // 带前导零的文件名要保留原始串，否则拼不出测例路径
-        assert_eq!(
-            parse_level_file_name("c3_01.md"),
-            Some((3, 1, "3".to_string(), "01".to_string()))
-        );
-        assert_eq!(parse_level_file_name("c1.md"), None);
-        assert_eq!(parse_level_file_name("序章_剧情版.md"), None);
-    }
-
-    #[test]
-    fn level_ids_are_parsed() {
-        assert_eq!(split_level_id("1-5"), ("1".into(), "5".into()));
-        assert_eq!(split_level_id("12-3"), ("12".into(), "3".into()));
+    fn loads_repo_levels_in_order() {
+        let store = LevelStore::default_repo();
+        let ids = store.level_ids();
+        assert!(ids.len() >= 9, "应至少加载 Phase 1 的 9 个关卡，实际：{:?}", ids);
+        assert_eq!(ids[0], "1-1");
+        assert!(ids.contains(&"1-4S".to_string()));
+        assert!(ids.contains(&"1-7S".to_string()));
+        // 1-4S (order 4.5) 应排在 1-4 (order 4) 与 1-5 (order 5) 之间
+        let p4 = ids.iter().position(|x| x == "1-4").unwrap();
+        let p4s = ids.iter().position(|x| x == "1-4S").unwrap();
+        let p5 = ids.iter().position(|x| x == "1-5").unwrap();
+        assert!(p4 < p4s && p4s < p5);
     }
 }

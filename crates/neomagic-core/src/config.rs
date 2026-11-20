@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 /// 关卡用的源语言。
 ///
 /// 序列化成 `"asm"` / `"c"`（前端与关卡页 JSON 里都这么写）。
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Language {
     /// 星之语（汇编）

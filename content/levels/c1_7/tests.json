@@ -1,0 +1,32 @@
+{
+  "level": "1-7",
+  "language": "asm",
+  "availableOps": ["add", "addi", "sub", "mv", "blt", "bge", "j", "ecall"],
+  "forbiddenRegs": [],
+  "maxInstructions": 5000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "n = 5：1+2+3+4+5 = 15",
+        "initial": { "regs": { "t0": 5 } },
+        "expected": { "regs": { "t1": 15 } }
+      },
+      {
+        "name": "n = 1：单步循环结果为 1",
+        "initial": { "regs": { "t0": 1 } },
+        "expected": { "regs": { "t1": 1 } }
+      },
+      {
+        "name": "n = 0：空循环边界为 0",
+        "initial": { "regs": { "t0": 0 } },
+        "expected": { "regs": { "t1": 0 } }
+      },
+      {
+        "name": "n = 100：高斯求和 = 5050",
+        "initial": { "regs": { "t0": 100 } },
+        "expected": { "regs": { "t1": 5050 } }
+      }
+    ]
+  }
+}

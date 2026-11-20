@@ -1,0 +1,52 @@
+{
+  "id": "1-2",
+  "chapter": 1,
+  "order": 2,
+  "kind": "lesson",
+  "title": "引入常量：addi 与 zero",
+  "mode": "online",
+  "allowLocalFile": true,
+  "language": "asm",
+  "prerequisites": ["1-1"],
+  "concepts": ["immediate", "addi", "zero"],
+  "goalSummary": {
+    "before": "t0 中有一个未知整数（没有任何寄存器里存着 7）",
+    "after": "计算 t0 + 7，将结果存入 t1"
+  },
+  "sandbox": {
+    "type": "manual-cpu",
+    "modules": ["regs", "constants", "alu"],
+    "recordToAsm": true,
+    "focusRegs": ["t0", "t1", "zero"],
+    "regRoles": {
+      "t0": "输入",
+      "t1": "结果",
+      "zero": "恒为 0"
+    },
+    "constantCards": [
+      { "label": "7", "value": 7, "kind": "immediate" }
+    ],
+    "aluOps": ["+"],
+    "allowCopy": false,
+    "warmupPuzzle": {
+      "prompt": "把 t0(5) 放入左输入槽，把常量卡 7 放入右输入槽，目标选 t1，点击「执行一步」。",
+      "initial": {
+        "regs": { "t0": 5, "t1": 0, "zero": 0 }
+      },
+      "goal": {
+        "regs": { "t1": 12 }
+      }
+    }
+  },
+  "editor": {
+    "readonlyPrefix": 1,
+    "readonlySuffix": 1,
+    "suggested": { "2": "addi t1, t0, 7" }
+  },
+  "hints": [
+    { "level": 1, "type": "diagram", "content": "addi 末尾的 i 代表 immediate（立即数），第三个位置直接写固定整数 7。" },
+    { "level": 2, "type": "steps", "content": "目标填 t1，源寄存器填 t0，常量填 7。" },
+    { "level": 3, "type": "snippet", "content": "addi t1, t0, 7" }
+  ],
+  "wikiRefs": ["rv32-registers", "rv32-arithmetic"]
+}

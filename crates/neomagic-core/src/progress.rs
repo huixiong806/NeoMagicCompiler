@@ -66,6 +66,9 @@ impl Default for UserProgress {
 pub struct Settings {
     #[serde(default = "yes")]
     pub show_hints: bool,
+    /// 自由探索模式：开启后所有关卡无需前置直接解锁（适合有基础的玩家）。
+    #[serde(default)]
+    pub free_explore: bool,
 }
 
 fn yes() -> bool {
@@ -74,7 +77,7 @@ fn yes() -> bool {
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { show_hints: true }
+        Self { show_hints: true, free_explore: false }
     }
 }
 
@@ -165,9 +168,40 @@ impl UserProgress {
             .collect()
     }
 
-    /// 这一关解锁了吗（解锁判定的**唯一**入口，UI 与门禁都问它）。
+    /// 这一关解锁了吗（线性旧接口，保留兼容单元测试）。
     pub fn is_unlocked(&self, level_id: &str, all_levels: &[String]) -> bool {
         self.unlocked_levels(all_levels).iter().any(|id| id == level_id)
+    }
+
+    /// **DAG 技能树解锁判定**（新版核心入口）：
+    /// - 若开启了 `settings.free_explore`，且关卡在表中存在，则直接解锁；
+    /// - 否则，该关卡所有 `prerequisites` 全部已通过时解锁（无前置的起点关天然解锁）；
+    /// - 已通过的关卡始终保持解锁状态。
+    pub fn is_unlocked_dag(
+        &self,
+        level_id: &str,
+        prereq_map: &BTreeMap<String, Vec<String>>,
+    ) -> bool {
+        let Some(prereqs) = prereq_map.get(level_id) else {
+            return false;
+        };
+        if self.settings.free_explore || self.is_passed(level_id) {
+            return true;
+        }
+        prereqs.iter().all(|p| self.is_passed(p))
+    }
+
+    /// 按 `all_levels` 顺序返回当前 DAG 规则下所有已解锁关卡 ID。
+    pub fn unlocked_levels_dag(
+        &self,
+        all_levels: &[String],
+        prereq_map: &BTreeMap<String, Vec<String>>,
+    ) -> Vec<String> {
+        all_levels
+            .iter()
+            .filter(|id| self.is_unlocked_dag(id, prereq_map))
+            .cloned()
+            .collect()
     }
 
     pub fn attempts(&self, level_id: &str) -> u32 {
@@ -204,14 +238,21 @@ pub fn default_progress_path(app_data_dir: Option<&Path>) -> PathBuf {
     }
 }
 
-/// 当前时间的 ISO 8601 字符串（不引外部依赖，用系统时间换算）。
+/// 当前时间的 ISO 8601 字符串（在 `wasm32` 目标上避免 `SystemTime::now()` panic）。
 pub fn now_iso() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let secs = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-    format_iso(secs)
+    #[cfg(target_arch = "wasm32")]
+    {
+        String::new()
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let secs = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        format_iso(secs)
+    }
 }
 
 /// 把 Unix 秒格式化成 `YYYY-MM-DDTHH:MM:SSZ`。

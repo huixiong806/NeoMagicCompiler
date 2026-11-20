@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+@keyframes nmc-flash-write {
+  0% {
+    background-color: rgba(34, 211, 238, 0.35);
+    box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.7);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+@keyframes nmc-flash-warn {
+  0% {
+    background-color: rgba(251, 146, 60, 0.38);
+    box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.8);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+.nmc-flash-write {
+  animation: nmc-flash-write 0.85s ease-out;
+}
+
+.nmc-flash-warn {
+  animation: nmc-flash-warn 0.9s ease-out;
+}
+
+/* CodeMirror 6 暗色主题微调 */
+.cm-editor {
+  height: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13.5px;
+  background-color: #0b1220;
+  color: #e2e8f0;
+}
+
+.cm-editor .cm-gutters {
+  background-color: #0f172a;
+  color: #64748b;
+  border-right: 1px solid #1e293b;
+}
+
+.cm-editor .cm-activeLine {
+  background-color: rgba(30, 41, 59, 0.55);
+}
+
+.cm-editor .cm-line-readonly {
+  background-color: rgba(51, 65, 85, 0.35);
+  color: #94a3b8;
+}
+
+.cm-editor .cm-line-pc {
+  background-color: rgba(16, 185, 129, 0.24) !important;
+  box-shadow: inset 3px 0 0 #10b981;
+}
+
+.cm-editor .cm-line-error {
+  background-color: rgba(244, 63, 94, 0.22) !important;
+  box-shadow: inset 3px 0 0 #f43f5e;
+}
+
+.cm-editor .cm-line-highlight {
+  background-color: rgba(56, 189, 248, 0.14);
+}

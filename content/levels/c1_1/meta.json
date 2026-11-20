@@ -1,0 +1,49 @@
+{
+  "id": "1-1",
+  "chapter": 1,
+  "order": 1,
+  "kind": "lesson",
+  "title": "第一条指令：寄存器与 add",
+  "mode": "online",
+  "allowLocalFile": true,
+  "language": "asm",
+  "prerequisites": [],
+  "concepts": ["register", "add"],
+  "goalSummary": {
+    "before": "t0 与 t1 中各存着一个整数，t2 初始为 0",
+    "after": "计算 t0 + t1，将结果写入 t2"
+  },
+  "sandbox": {
+    "type": "manual-cpu",
+    "modules": ["regs", "alu"],
+    "recordToAsm": true,
+    "focusRegs": ["t0", "t1", "t2"],
+    "regRoles": {
+      "t0": "输入 A",
+      "t1": "输入 B",
+      "t2": "结果"
+    },
+    "aluOps": ["+"],
+    "allowCopy": false,
+    "warmupPuzzle": {
+      "prompt": "把 t0(3) 和 t1(5) 放进运算台的左右两个输入槽，目标选 t2，再点「执行一步」。",
+      "initial": {
+        "regs": { "t0": 3, "t1": 5, "t2": 0 }
+      },
+      "goal": {
+        "regs": { "t2": 8 }
+      }
+    }
+  },
+  "editor": {
+    "readonlyPrefix": 1,
+    "readonlySuffix": 1,
+    "suggested": { "2": "add t2, t0, t1" }
+  },
+  "hints": [
+    { "level": 1, "type": "diagram", "content": "add 指令的格式是：add 目标, 左输入, 右输入。先写结果放哪儿，再写谁加谁。" },
+    { "level": 2, "type": "steps", "content": "目标寄存器填 t2，两个输入寄存器填 t0 和 t1，用英文逗号分隔。" },
+    { "level": 3, "type": "snippet", "content": "add t2, t0, t1" }
+  ],
+  "wikiRefs": ["rv32-registers", "rv32-arithmetic"]
+}

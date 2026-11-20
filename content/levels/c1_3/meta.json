@@ -1,0 +1,51 @@
+{
+  "id": "1-3",
+  "chapter": 1,
+  "order": 3,
+  "kind": "lesson",
+  "title": "减法与覆盖：sub、mv 与暂存槽",
+  "mode": "online",
+  "allowLocalFile": true,
+  "language": "asm",
+  "prerequisites": ["1-2"],
+  "concepts": ["sub", "mv", "overwrite", "temp-register"],
+  "goalSummary": {
+    "before": "t0 = a，t1 = b（t3 为空闲暂存槽）",
+    "after": "计算 t2 = a - b，并且交换 t0 与 t1 的值"
+  },
+  "sandbox": {
+    "type": "manual-cpu",
+    "modules": ["regs", "alu"],
+    "recordToAsm": true,
+    "focusRegs": ["t0", "t1", "t2", "t3"],
+    "regRoles": {
+      "t0": "输入 A",
+      "t1": "输入 B",
+      "t2": "差值",
+      "t3": "暂存槽"
+    },
+    "aluOps": ["-"],
+    "allowCopy": true,
+    "warmupPuzzle": {
+      "prompt": "先算 t0 - t1 放入 t2，再借助空闲的 t3 把 t0(10) 与 t1(3) 的值互换。",
+      "initial": {
+        "regs": { "t0": 10, "t1": 3, "t2": 0, "t3": 0 }
+      },
+      "goal": {
+        "regs": { "t0": 3, "t1": 10, "t2": 7 }
+      },
+      "guards": ["warnOverwriteLostValue"]
+    }
+  },
+  "editor": {
+    "readonlyPrefix": 1,
+    "readonlySuffix": 1,
+    "suggested": { "2": "sub t2, t0, t1" }
+  },
+  "hints": [
+    { "level": 1, "type": "diagram", "content": "先算完 t2 = t0 - t1 再做交换，否则换完之后再减符号会反。" },
+    { "level": 2, "type": "steps", "content": "1. sub t2, t0, t1；2. 用 mv 把 t0 备份到 t3；3. 把 t1 放进 t0；4. 把 t3 放进 t1。" },
+    { "level": 3, "type": "snippet", "content": "sub t2, t0, t1\nmv  t3, t0\nmv  t0, t1\nmv  t1, t3" }
+  ],
+  "wikiRefs": ["rv32-registers", "rv32-arithmetic"]
+}

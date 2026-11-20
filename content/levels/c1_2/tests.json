@@ -1,0 +1,32 @@
+{
+  "level": "1-2",
+  "language": "asm",
+  "availableOps": ["addi", "ecall"],
+  "forbiddenRegs": [],
+  "maxInstructions": 1000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "5 + 7 = 12",
+        "initial": { "regs": { "t0": 5 } },
+        "expected": { "regs": { "t1": 12 } }
+      },
+      {
+        "name": "0 + 7 = 7（零值）",
+        "initial": { "regs": { "t0": 0 } },
+        "expected": { "regs": { "t1": 7 } }
+      },
+      {
+        "name": "-7 + 7 = 0（正负抵消）",
+        "initial": { "regs": { "t0": -7 } },
+        "expected": { "regs": { "t1": 0 } }
+      },
+      {
+        "name": "-100 + 7 = -93（负数结果）",
+        "initial": { "regs": { "t0": -100 } },
+        "expected": { "regs": { "t1": -93 } }
+      }
+    ]
+  }
+}

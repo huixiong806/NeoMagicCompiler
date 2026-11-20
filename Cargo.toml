@@ -1,8 +1,8 @@
 [workspace]
 resolver = "3"
 members = [
-    "app/src-tauri",
     "crates/neomagic-core",
+    "crates/nmc-wasm",
     "crates/riscv-assembler",
     "crates/riscv-simulator",
     "crates/starlang",

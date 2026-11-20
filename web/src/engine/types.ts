@@ -1,0 +1,268 @@
+/**
+ * 前后端共享契约类型（camelCase），与 `crates/neomagic-core/src/dto.rs` 严格对齐。
+ */
+
+export type Language = 'asm' | 'c';
+export type LevelKind = 'lesson' | 'practice' | 'challenge';
+export type PlaygroundWorkMode = 'online' | 'local-file' | 'local-project';
+
+export interface GoalSummary {
+  before: string;
+  after: string;
+}
+
+export interface HintItem {
+  level: number;
+  type: 'diagram' | 'steps' | 'snippet' | string;
+  content: string;
+}
+
+export interface ToolbarConfig {
+  run: boolean;
+  debug: boolean;
+  submit: boolean;
+  load: boolean;
+  save: boolean;
+}
+
+export interface EditorConfig {
+  level: string;
+  language: Language;
+  lineNumbers: boolean;
+  readonlyPrefix: number;
+  readonlySuffix: number;
+  hidden: number[];
+  highlight: number[];
+  suggested: Record<string, string>;
+  toolbar: ToolbarConfig;
+}
+
+/** 沙盘 1（manual-cpu）可插拔子模块标识。 */
+export type ManualCpuModule =
+  | 'regs'
+  | 'constants'
+  | 'alu'
+  | 'memory'
+  | 'pcTrack'
+  | 'stack'
+  | 'mmio';
+
+export type ManualCpuAluOp = '+' | '-' | '×' | '÷' | '%';
+
+export type ManualCpuGuard =
+  | 'warnOverwriteLostValue'
+  | 'requireBaseRegForMemory';
+
+export interface ConstantCard {
+  label: string;
+  value: number;
+  kind: 'immediate' | 'address';
+}
+
+export interface PcTrackInstruction {
+  label?: string;
+  op: 'blt' | 'bge' | 'beq' | 'bne' | 'j' | 'mv' | 'add' | 'addi' | 'sub' | 'halt';
+  a?: string;
+  b?: string;
+  dst?: string;
+  src?: string;
+  imm?: number;
+  target?: string;
+  asm: string;
+}
+
+export interface PcTrackCase {
+  label: string;
+  initial: {
+    regs: Record<string, number>;
+    memory?: Record<string, number>;
+  };
+  goal: {
+    regs?: Record<string, number>;
+    memory?: Record<string, number>;
+  };
+}
+
+export interface ManualCpuSandboxConfig {
+  type: 'manual-cpu';
+  modules: ManualCpuModule[];
+  recordToAsm?: boolean;
+  focusRegs: string[];
+  regRoles?: Record<string, string>;
+  constantCards?: ConstantCard[];
+  aluOps?: ManualCpuAluOp[];
+  allowCopy?: boolean;
+  watchMemory?: string[];
+  pcTrack?: {
+    cases?: PcTrackCase[];
+    program: PcTrackInstruction[];
+  };
+  warmupPuzzle: {
+    prompt: string;
+    initial: {
+      regs: Record<string, number>;
+      memory?: Record<string, number>;
+    };
+    goal: {
+      regs?: Record<string, number>;
+      memory?: Record<string, number>;
+    };
+    guards?: ManualCpuGuard[];
+  };
+}
+
+/** 未来第 2~7 章沙盘配置的开放联合类型（便于 SandboxRegistry 扩展）。 */
+export interface PlaceholderSandboxConfig {
+  type: 'memory-canvas' | 'lexer-ast-lab' | 'pipeline-stage';
+  [key: string]: unknown;
+}
+
+export type SandboxConfig = ManualCpuSandboxConfig | PlaceholderSandboxConfig;
+
+export interface LevelMeta {
+  id: string;
+  chapter: number;
+  order: number;
+  kind: LevelKind;
+  title: string;
+  mode: string;
+  allowLocalFile: boolean;
+  language: Language;
+  prerequisites: string[];
+  parInstructions?: number;
+  concepts: string[];
+  goalSummary: GoalSummary;
+  sandbox: SandboxConfig;
+  editor: EditorConfig;
+  hints: HintItem[];
+  wikiRefs: string[];
+}
+
+export interface LevelSummary {
+  id: string;
+  chapter: number;
+  order: number;
+  kind: LevelKind;
+  title: string;
+  language: Language;
+  mode: string;
+  allowLocalFile: boolean;
+  prerequisites: string[];
+  concepts: string[];
+  parInstructions?: number;
+  passed: boolean;
+  unlocked: boolean;
+  attempts: number;
+  bestScore?: number;
+}
+
+export interface TestCasePreview {
+  index: number;
+  name: string;
+  initialRegs: Record<string, number>;
+  initialMemory: Record<string, string>;
+  expectedRegs: Record<string, number>;
+  expectedMemory: Record<string, string>;
+}
+
+export interface LevelPayload {
+  id: string;
+  meta: LevelMeta;
+  lessonMarkdown: string;
+  editor: EditorConfig;
+  initialCode: string;
+  availableOps: string[];
+  forbiddenRegs: string[];
+  testsPreview: TestCasePreview[];
+  solution?: string;
+}
+
+export interface MachineSnapshot {
+  pc: number;
+  pcLine: number;
+  regs: Record<string, number>;
+  memoryWords: Record<string, number>;
+  tick: number;
+  instructions: number;
+  output: string;
+  exitCode?: number;
+  pauseKind: string;
+  pauseDetail: string;
+  halted: boolean;
+  canStep: boolean;
+  canStepBack: boolean;
+  generatedAssembly?: string;
+}
+
+export interface StepPayload extends MachineSnapshot {
+  regChanges: Record<string, number>;
+  memChanges: Record<string, number>;
+}
+
+export interface DiffDto {
+  what: string;
+  expected: string;
+  actual: string;
+}
+
+export interface FailureDto {
+  caseIndex: number;
+  pc: number;
+  line: number;
+  reason: string;
+  reasonText: string;
+  regs: Record<string, number>;
+}
+
+export interface TestVerdictDto {
+  name: string;
+  passed: boolean;
+  detail: string;
+  diffs: DiffDto[];
+  actualOutput?: string;
+  failure?: FailureDto;
+}
+
+export interface ErrorDto {
+  line: number;
+  message: string;
+  kind: string;
+}
+
+export interface SubmitDto {
+  level: string;
+  passed: boolean;
+  score: number;
+  instructionCount?: number;
+  parInstructions?: number;
+  metPar: boolean;
+  summary: string;
+  tests: TestVerdictDto[];
+  errors: ErrorDto[];
+  generatedAssembly?: string;
+}
+
+export interface WikiEntry {
+  topic: string;
+  title: string;
+  markdown: string;
+}
+
+export interface LevelProgressRecord {
+  levelId: string;
+  passed: boolean;
+  completedAt?: string;
+  attempts: number;
+  bestScore?: number;
+  metPar?: boolean;
+}
+
+export interface UserProgress {
+  version: number;
+  lastModified: string;
+  levels: Record<string, LevelProgressRecord>;
+  settings: {
+    showHints: boolean;
+    freeExplore: boolean;
+  };
+}
