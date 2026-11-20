@@ -1,0 +1,60 @@
+{
+  "level": "1-1",
+  "language": "asm",
+  "availableOps": [
+    "add",
+    "ecall"
+  ],
+  "forbiddenRegs": [],
+  "maxInstructions": 1000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "1 + 1 = 2",
+        "initial": {
+          "regs": {
+            "x1": 1,
+            "x2": 1
+          },
+          "sp": 1
+        },
+        "expected": {
+          "regs": {
+            "x3": 2
+          }
+        }
+      },
+      {
+        "name": "0 + 0 = 0（两边都是空槽）",
+        "initial": {
+          "regs": {
+            "x1": 0,
+            "x2": 0
+          },
+          "sp": 0
+        },
+        "expected": {
+          "regs": {
+            "x3": 0
+          }
+        }
+      },
+      {
+        "name": "2026 + 74 = 2100",
+        "initial": {
+          "regs": {
+            "x1": 2026,
+            "x2": 74
+          },
+          "sp": 74
+        },
+        "expected": {
+          "regs": {
+            "x3": 2100
+          }
+        }
+      }
+    ]
+  }
+}

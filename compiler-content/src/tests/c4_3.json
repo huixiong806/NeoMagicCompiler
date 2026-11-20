@@ -1,0 +1,60 @@
+{
+  "level": "4-3",
+  "language": "asm",
+  "availableOps": [
+    "li", "la", "lui", "addi", "lbu", "sb", "sw", "lw", "add", "sub", "mul",
+    "div", "rem", "blt", "bgt", "bge", "beq", "bne", "j", "jal", "jalr", "ecall"
+  ],
+  "forbiddenRegs": [],
+  "maxInstructions": 50000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "空输入：一个 token 都不用输出",
+        "input": { "text": "" },
+        "output": { "text": "" }
+      },
+      {
+        "name": "只有一个数：没有运算符可弹，直接输出它",
+        "input": { "text": "7\n" },
+        "output": { "text": "NUM:7\n" }
+      },
+      {
+        "name": "* 和 / 比 + 和 - 先算（优先级：乘除抢在加减前面输出）",
+        "input": { "text": "1+2*3\n" },
+        "output": { "text": "NUM:1\nNUM:2\nNUM:3\nOP:*\nOP:+\n" }
+      },
+      {
+        "name": "括号改变顺序：括号本身不输出，但 + 要抢在 * 前面",
+        "input": { "text": "(1+2)*3\n" },
+        "output": { "text": "NUM:1\nNUM:2\nOP:+\nNUM:3\nOP:*\n" }
+      },
+      {
+        "name": "一样优先级的运算符从左到右：减号后面的减号要先把前一个弹出来",
+        "input": { "text": "1-2-3\n" },
+        "output": { "text": "NUM:1\nNUM:2\nOP:-\nNUM:3\nOP:-\n" }
+      },
+      {
+        "name": "多位数要整体读成一个数；除法的顺序同样由栈决定",
+        "input": { "text": "12 + 340 * 5 / 2\n" },
+        "output": { "text": "NUM:12\nNUM:340\nNUM:5\nOP:*\nNUM:2\nOP:/\nOP:+\n" }
+      },
+      {
+        "name": "括号套括号：里层先算完，外层再算",
+        "input": { "text": "((1+2))*3\n" },
+        "output": { "text": "NUM:1\nNUM:2\nOP:+\nNUM:3\nOP:*\n" }
+      },
+      {
+        "name": "括号里也能有乘除：优先级照样由括号挡住",
+        "input": { "text": "(2+3*4)*(1+1)\n" },
+        "output": { "text": "NUM:2\nNUM:3\nNUM:4\nOP:*\nOP:+\nNUM:1\nNUM:1\nOP:+\nOP:*\n" }
+      },
+      {
+        "name": "不加多余括号也是对的：先乘后加，括号只是排版",
+        "input": { "text": "(1)+2*(3)\n" },
+        "output": { "text": "NUM:1\nNUM:2\nNUM:3\nOP:*\nOP:+\n" }
+      }
+    ]
+  }
+}

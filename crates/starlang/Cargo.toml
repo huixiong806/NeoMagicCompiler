@@ -1,0 +1,11 @@
+[package]
+name = "starlang"
+version = "0.1.0"
+edition = "2021"
+description = "星咒（C 子集）编译器：星咒源码 → 星之语汇编"
+
+[dependencies]
+
+[dev-dependencies]
+riscv-assembler = { path = "../riscv-assembler" }
+riscv-simulator = { path = "../riscv-simulator" }

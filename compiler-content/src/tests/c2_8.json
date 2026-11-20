@@ -1,0 +1,32 @@
+{
+  "level": "2-8",
+  "language": "c",
+  "availableOps": [],
+  "forbiddenRegs": [],
+  "maxInstructions": 5000000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "fib(0) = 0（基线条件）",
+        "call": { "fn": "solve", "args": [0] },
+        "expected": { "ret": 0 }
+      },
+      {
+        "name": "fib(1) = 1（基线条件）",
+        "call": { "fn": "solve", "args": [1] },
+        "expected": { "ret": 1 }
+      },
+      {
+        "name": "fib(10) = 55",
+        "call": { "fn": "solve", "args": [10] },
+        "expected": { "ret": 55 }
+      },
+      {
+        "name": "fib(20) = 6765（分叉最多的一次）",
+        "call": { "fn": "solve", "args": [20] },
+        "expected": { "ret": 6765 }
+      }
+    ]
+  }
+}

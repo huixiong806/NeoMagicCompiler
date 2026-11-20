@@ -1,0 +1,37 @@
+{
+  "level": "2-10",
+  "language": "c",
+  "availableOps": [],
+  "forbiddenRegs": [],
+  "maxInstructions": 300000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "0 里一个 1 也没有（边界）",
+        "call": { "fn": "solve", "args": [0] },
+        "expected": { "ret": 0 }
+      },
+      {
+        "name": "1 里有一个 1（边界）",
+        "call": { "fn": "solve", "args": [1] },
+        "expected": { "ret": 1 }
+      },
+      {
+        "name": "13（二进制 1101）里有三个 1",
+        "call": { "fn": "solve", "args": [13] },
+        "expected": { "ret": 3 }
+      },
+      {
+        "name": "1023（二进制十个 1）里有十个 1",
+        "call": { "fn": "solve", "args": [1023] },
+        "expected": { "ret": 10 }
+      },
+      {
+        "name": "0xFFFFFFFF 全凸起：三十二个 1（边界）",
+        "call": { "fn": "solve", "args": [4294967295] },
+        "expected": { "ret": 32 }
+      }
+    ]
+  }
+}

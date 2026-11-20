@@ -1,0 +1,54 @@
+{
+  "level": "3-1",
+  "language": "asm",
+  "availableOps": ["li", "lw", "lb", "sb", "sw", "addi", "divu", "remu", "beq", "bne", "j", "ecall"],
+  "forbiddenRegs": [],
+  "maxInstructions": 20000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "一句普通的话：12 个字符（含句尾换行）",
+        "input": { "text": "hello world\n" },
+        "output": { "text": "12" },
+        "expected": { "memory": { "0x2000": 12 } }
+      },
+      {
+        "name": "空输入：一个字符都没有，输出 0",
+        "input": { "text": "" },
+        "output": { "text": "0" },
+        "expected": { "memory": { "0x2000": 0 } }
+      },
+      {
+        "name": "只有一个换行符：换行也是字符，算 1 个",
+        "input": { "text": "\n" },
+        "output": { "text": "1" },
+        "expected": { "memory": { "0x2000": 1 } }
+      },
+      {
+        "name": "单个字符 'A'：算 1 个",
+        "input": { "text": "A" },
+        "output": { "text": "1" },
+        "expected": { "memory": { "0x2000": 1 } }
+      },
+      {
+        "name": "空格也是字符：三个空格算 3 个",
+        "input": { "text": "   " },
+        "output": { "text": "3" },
+        "expected": { "memory": { "0x2000": 3 } }
+      },
+      {
+        "name": "多行文本：四行各带换行，共 12 个字符",
+        "input": { "text": "ab\ncd\nef\ngh\n" },
+        "output": { "text": "12" },
+        "expected": { "memory": { "0x2000": 12 } }
+      },
+      {
+        "name": "三位数长度：100 个相同字符，要输出 100 而不是只输出一位",
+        "input": { "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+        "output": { "text": "100" },
+        "expected": { "memory": { "0x2000": 100 } }
+      }
+    ]
+  }
+}

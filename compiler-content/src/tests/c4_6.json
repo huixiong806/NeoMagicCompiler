@@ -1,0 +1,72 @@
+{
+  "level": "4-6",
+  "language": "asm",
+  "availableOps": ["lb", "lbu", "sb", "lw", "sw", "li", "la", "mv", "add", "addi", "sub", "beq", "bne", "blt", "bge", "j", "jal", "jalr", "ret", "ecall"],
+  "forbiddenRegs": [],
+  "maxInstructions": 100000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "空程序：一条语句都没有，一行输出也没有（边界）",
+        "input": { "text": "" },
+        "output": { "text": "" }
+      },
+      {
+        "name": "干干净净的一段：声明过再 print，一个字都不输出",
+        "input": { "text": "int a; print a;\n" },
+        "output": { "text": "" }
+      },
+      {
+        "name": "用了没声明的名字：print a; → ERR:undecl:a",
+        "input": { "text": "print a;\n" },
+        "output": { "text": "ERR:undecl:a" }
+      },
+      {
+        "name": "同一个名字声明两次：int a; int a; → ERR:dup:a（只报一条）",
+        "input": { "text": "int a; int a;\n" },
+        "output": { "text": "ERR:dup:a" }
+      },
+      {
+        "name": "两种错一起出现，按遇到顺序报：int a; int b; int a; print c;",
+        "input": { "text": "int a; int b; int a; print c;\n" },
+        "output": { "text": "ERR:dup:a\nERR:undecl:c" }
+      },
+      {
+        "name": "错了一遍还要接着查：连续三次重复声明 → 三条 ERR:dup:a",
+        "input": { "text": "int a; int a; int a;\n" },
+        "output": { "text": "ERR:dup:a\nERR:dup:a" }
+      },
+      {
+        "name": "报错之后的声明仍然算数：int a; int a; print a; → 只报 dup，print 不报",
+        "input": { "text": "int a; int a; print a;\n" },
+        "output": { "text": "ERR:dup:a" }
+      },
+      {
+        "name": "两个名字都没声明过：print z; print y; → 两条 undecl",
+        "input": { "text": "print z; print y;\n" },
+        "output": { "text": "ERR:undecl:z\nERR:undecl:y" }
+      },
+      {
+        "name": "语句用换行分开也一样：三条声明一条使用，全对 → 空输出",
+        "input": { "text": "int x;\nint y;\nint z;\nprint y;\n" },
+        "output": { "text": "" }
+      },
+      {
+        "name": "账本塞满 26 格：a 到 z 全声明一遍，再 print a 和 z → 没有错",
+        "input": { "text": "int a; int b; int c; int d; int e; int f; int g; int h; int i; int j; int k; int l; int m; int n; int o; int p; int q; int r; int s; int t; int u; int v; int w; int x; int y; int z; print a; print z;" },
+        "output": { "text": "" }
+      },
+      {
+        "name": "字母表的头尾搞混：只声明了 a、b、z，print a; print y; → 只有 y 没声明",
+        "input": { "text": "int a; int b; int z; print a; print y; print z;" },
+        "output": { "text": "ERR:undecl:y" }
+      },
+      {
+        "name": "全是错的一段：三条未声明的使用按顺序报出来",
+        "input": { "text": "print a; print b; print c;" },
+        "output": { "text": "ERR:undecl:a\nERR:undecl:b\nERR:undecl:c" }
+      }
+    ]
+  }
+}

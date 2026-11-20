@@ -1,0 +1,54 @@
+{
+  "level": "1-15",
+  "language": "asm",
+  "availableOps": ["li", "lw", "sw", "add", "addi", "sub", "mul", "blt", "bge", "beq", "bne", "j", "jal", "jalr", "ecall"],
+  "forbiddenRegs": [],
+  "maxInstructions": 20000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "门槛 8，矿石 3 + 4 + 5 = 12：达标，输出 1",
+        "input": { "text": "8 3 4 5 0 " },
+        "output": { "text": "1" },
+        "expected": { "memory": { "0x1004": 12 } }
+      },
+      {
+        "name": "门槛 10，矿石 2 + 3 = 5：不够，输出 0",
+        "input": { "text": "10 2 3 0 " },
+        "output": { "text": "0" },
+        "expected": { "memory": { "0x1004": 5 } }
+      },
+      {
+        "name": "十位数要能拼对：门槛 100，矿石 50 + 60 = 110，达标输出 1",
+        "input": { "text": "100 50 60 0 " },
+        "output": { "text": "1" },
+        "expected": { "memory": { "0x1004": 110 } }
+      },
+      {
+        "name": "正好卡在门槛上（5 = 5）：也算达标，输出 1",
+        "input": { "text": "5 5 0 " },
+        "output": { "text": "1" },
+        "expected": { "memory": { "0x1004": 5 } }
+      },
+      {
+        "name": "一个矿石都没有（门槛 0，紧跟一个 0）：输出 1",
+        "input": { "text": "0 0 " },
+        "output": { "text": "1" },
+        "expected": { "memory": { "0x1004": 0 } }
+      },
+      {
+        "name": "负数也算数：门槛 -5，矿石 -3 + -4 = -7：不够，输出 0",
+        "input": { "text": "-5 -3 -4 0 " },
+        "output": { "text": "0" },
+        "expected": { "memory": { "0x1004": -7 } }
+      },
+      {
+        "name": "门槛 -10，矿石 -1 + -2 = -3：达标，输出 1",
+        "input": { "text": "-10 -1 -2 0 " },
+        "output": { "text": "1" },
+        "expected": { "memory": { "0x1004": -3 } }
+      }
+    ]
+  }
+}

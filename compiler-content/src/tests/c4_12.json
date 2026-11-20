@@ -1,0 +1,16 @@
+{
+  "level": "4-12",
+  "language": "asm",
+  "availableOps": [],
+  "forbiddenRegs": [],
+  "maxInstructions": 500000,
+  "goal": {
+    "type": "scripted",
+    "judge": "compile_and_run",
+    "judgeArgs": {
+      "program": "int core() { return 6; }\nint main() {\n  int total = 0;\n  int ring = 1;\n  while (ring <= 3) {\n    total = total + core();\n    if (ring == 2) { total = total + core() * 4; }\n    ring = ring + 1;\n  }\n  return total;\n}\n",
+      "fn": "main",
+      "expectedRet": 42
+    }
+  }
+}

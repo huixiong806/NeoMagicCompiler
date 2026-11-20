@@ -1,0 +1,81 @@
+{
+  "level": "1-4",
+  "language": "asm",
+  "availableOps": [
+    "mul",
+    "div",
+    "rem",
+    "ecall"
+  ],
+  "forbiddenRegs": [],
+  "maxInstructions": 1000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "17 除以 5：商 3，余数 2",
+        "initial": {
+          "regs": {
+            "x1": 17,
+            "x2": 5
+          },
+          "sp": 5
+        },
+        "expected": {
+          "regs": {
+            "x3": 3,
+            "x4": 2
+          }
+        }
+      },
+      {
+        "name": "100 除以 7：商 14，余数 2",
+        "initial": {
+          "regs": {
+            "x1": 100,
+            "x2": 7
+          },
+          "sp": 7
+        },
+        "expected": {
+          "regs": {
+            "x3": 14,
+            "x4": 2
+          }
+        }
+      },
+      {
+        "name": "3 除以 10：不够装一箱，商 0，余 3",
+        "initial": {
+          "regs": {
+            "x1": 3,
+            "x2": 10
+          },
+          "sp": 10
+        },
+        "expected": {
+          "regs": {
+            "x3": 0,
+            "x4": 3
+          }
+        }
+      },
+      {
+        "name": "-17 除以 5：商 -3，余数 -2（余数跟着被除数的符号）",
+        "initial": {
+          "regs": {
+            "x1": -17,
+            "x2": 5
+          },
+          "sp": 5
+        },
+        "expected": {
+          "regs": {
+            "x3": -3,
+            "x4": -2
+          }
+        }
+      }
+    ]
+  }
+}

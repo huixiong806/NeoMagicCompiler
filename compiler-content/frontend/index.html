@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head><meta charset="UTF-8"><title>Playground Test</title>
+<style>
+  :root {
+    --bg: #fff; --fg: #333; --quote-bg: #f5f5f5; --quote-border: #ddd;
+    --sidebar-bg: #fafafa; --theme-popup-bg: #fff; --theme-hover: #f0f0f0;
+    --links: #2563eb; --icons: #999; --icons-hover: #666; --sidebar-active: #111;
+  }
+  body { font-family: sans-serif; max-width: 860px; margin: 2rem auto; }
+
+  /* ── riscv-editor (inline for dev) ── */
+  .riscv-playground { margin: 1.5rem 0; border: 1px solid var(--quote-border); border-radius: 6px; overflow: hidden; background: var(--quote-bg); }
+  .riscv-editor { display: flex; flex-direction: row; background: var(--bg); max-height: 480px; overflow: hidden; }
+  .riscv-gutter { flex-shrink: 0; overflow: hidden; padding: 0.5rem 0; background: var(--sidebar-bg); border-right: 1px solid var(--quote-border); user-select: none; text-align: right; min-width: 3rem; }
+  .riscv-gutter-line { padding: 0 0.6rem; line-height: 1.5; font-family: "Source Code Pro", Consolas, "Courier New", monospace; font-size: 0.95em; color: var(--icons); overflow: hidden; box-sizing: border-box; }
+  .riscv-lines { flex: 1; overflow: auto; padding: 0.5rem 0; }
+  .riscv-line { display: block; width: 100%; margin: 0; padding: 0 0.8rem; border: none; border-radius: 0; outline: none; resize: none; overflow: hidden; background: transparent; color: var(--fg); font-family: "Source Code Pro", Consolas, "Courier New", monospace; font-size: 0.95em; line-height: 1.5; white-space: pre; box-sizing: border-box; }
+  .riscv-line:focus { background: var(--theme-hover); outline: none; box-shadow: inset 2px 0 0 var(--links); }
+  .riscv-line--readonly { color: var(--icons); background: var(--quote-bg); cursor: not-allowed; opacity: 0.7; }
+  .riscv-line--readonly:focus { box-shadow: inset 2px 0 0 var(--icons); background: var(--quote-bg); }
+
+  /* Zone 2 toolbar + console (minimal) */
+  .riscv-controls { border-top:1px solid var(--quote-border); background:var(--sidebar-bg); }
+  .riscv-toolbar { padding:0.6rem 0.75rem; }
+  .riscv-toolbar-group { display:flex; flex-wrap:wrap; align-items:center; gap:0.4rem; }
+  .riscv-toolbar-section { display:flex; align-items:center; gap:0.4rem; }
+  .riscv-toolbar-separator { display:inline-block; width:1px; height:1.5em; background:var(--quote-border); margin:0 0.3rem; }
+  .riscv-btn { cursor:pointer; padding:0.35rem 0.75rem; font-size:0.85rem; font-family:inherit; border:1px solid var(--icons); border-radius:4px; background:var(--theme-popup-bg); color:var(--fg); white-space:nowrap; }
+  .riscv-btn:hover { border-color:var(--icons-hover); background:var(--theme-hover); }
+  .riscv-btn--primary { border-color:var(--links); color:var(--links); font-weight:600; }
+  .riscv-btn--primary:hover { background:var(--links); color:var(--bg); }
+  .riscv-btn--secondary { border-color:transparent; background:transparent; color:var(--icons); font-size:0.8rem; padding:0.3rem 0.5rem; }
+  .riscv-btn-pair { display:inline-flex; }
+  .riscv-btn-pair .riscv-btn:first-child { border-radius:4px 0 0 4px; }
+  .riscv-btn-pair .riscv-btn:last-child { border-radius:0 4px 4px 0; border-left:none; }
+  .riscv-menu-wrapper { position:relative; }
+  .riscv-menu-dropdown { position:absolute; right:0; bottom:100%; margin-bottom:4px; min-width:140px; background:var(--theme-popup-bg); border:1px solid var(--quote-border); border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.12); z-index:10; padding:0.3rem 0; }
+  .riscv-menu-item { display:block; width:100%; padding:0.4rem 0.9rem; border:none; background:none; color:var(--fg); font-family:inherit; font-size:0.85rem; text-align:left; cursor:pointer; }
+  .riscv-menu-item:hover { background:var(--theme-hover); }
+  .riscv-console { border-top:1px solid var(--quote-border); background:var(--bg); }
+  .riscv-console-header { display:flex; justify-content:space-between; align-items:center; padding:0.35rem 0.75rem; font-size:0.8rem; font-weight:600; color:var(--icons); background:var(--sidebar-bg); border-bottom:1px solid var(--quote-border); }
+  .riscv-console-clear { cursor:pointer; padding:0.15rem 0.4rem; font-size:0.75rem; border-radius:3px; background:none; border:1px solid transparent; color:var(--icons); }
+  .riscv-console-clear:hover { border-color:var(--icons); background:var(--theme-hover); color:var(--fg); }
+  .riscv-console-body { max-height:200px; overflow-y:auto; padding:0.5rem 0.75rem; font-family:monospace; font-size:0.85em; line-height:1.5; }
+  .riscv-console-entry { padding:0.15rem 0; white-space:pre-wrap; }
+  .riscv-console-entry--empty { color:var(--icons); font-style:italic; }
+  .riscv-console-entry--info { color:var(--fg); }
+  .riscv-console-entry--success { color:#1e7e34; }
+  .riscv-console-entry--error { color:#c0392b; }
+  .riscv-console-entry--warning { color:#b7950b; }
+
+  /* Zone 2b debugger (minimal) */
+  .riscv-debug-panel { border-top:1px solid var(--quote-border); }
+  .riscv-pc-summary { padding:0.5rem 0.75rem; font-family:monospace; font-size:0.85em; background:var(--quote-bg); display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; }
+  .riscv-pc-label { font-weight:600; color:var(--icons); }
+  .riscv-pc-value { font-weight:600; color:var(--links); }
+  .riscv-reg-grid-container { padding:0.5rem 0.75rem; }
+  .riscv-reg-grid { width:100%; border-collapse:collapse; font-family:monospace; font-size:0.82em; }
+  .riscv-reg-grid td { padding:0.15rem 0.4rem; border:1px solid var(--quote-border); }
+  .riscv-reg-name { color:var(--icons); margin-right:0.4rem; font-weight:600; }
+  .riscv-reg-value { color:var(--fg); }
+  .riscv-reg--zero .riscv-reg-name, .riscv-reg--zero .riscv-reg-value { color:var(--icons); opacity:0.5; }
+  .riscv-reg--changed { background:#aaf0c1; }
+  .riscv-reg-abi { margin-top:0.3rem; font-size:0.75em; color:var(--icons); opacity:0.8; }
+  .riscv-memory-watch { padding:0.4rem 0.75rem; border-top:1px solid var(--quote-border); }
+  .riscv-memory-addr { padding:0.2rem 0.4rem; border:1px solid var(--quote-border); border-radius:3px; background:var(--bg); color:var(--fg); font-family:monospace; font-size:0.82em; width:80px; }
+  .riscv-memory-add-btn { cursor:pointer; padding:0.2rem 0.5rem; font-size:0.78rem; border:1px solid var(--icons); border-radius:3px; background:var(--theme-popup-bg); color:var(--fg); }
+</style>
+</head>
+<body>
+  <h2>Demo: &lt;riscv-playground&gt;</h2>
+  <pre><code class="language-riscv">{
+  "level": "1-1",
+  "lineNumbers": true,
+  "constraints": { "readonly": [1], "hidden": [] }
+}
+---
+# 1+1：将 x1 与 x2 相加，结果写入 x3
+add x3, x1, x2
+</code></pre>
+
+  <script type="module" src="/src/index.ts"></script>
+</body>
+</html>

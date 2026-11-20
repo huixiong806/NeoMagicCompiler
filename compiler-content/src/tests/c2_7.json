@@ -1,0 +1,32 @@
+{
+  "level": "2-7",
+  "language": "c",
+  "availableOps": [],
+  "forbiddenRegs": [],
+  "maxInstructions": 1000000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "0 的阶乘是 1（基线条件）",
+        "call": { "fn": "solve", "args": [0] },
+        "expected": { "ret": 1 }
+      },
+      {
+        "name": "1 的阶乘是 1（边界）",
+        "call": { "fn": "solve", "args": [1] },
+        "expected": { "ret": 1 }
+      },
+      {
+        "name": "5 的阶乘是 120",
+        "call": { "fn": "solve", "args": [5] },
+        "expected": { "ret": 120 }
+      },
+      {
+        "name": "12 的阶乘是 479001600（最深的一层）",
+        "call": { "fn": "solve", "args": [12] },
+        "expected": { "ret": 479001600 }
+      }
+    ]
+  }
+}

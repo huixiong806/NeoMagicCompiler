@@ -1,0 +1,16 @@
+{
+  "level": "2-6",
+  "language": "c",
+  "availableOps": [],
+  "forbiddenRegs": [],
+  "maxInstructions": 200000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "显示端口上必须出现 Sylas（不能多、不能少）",
+        "output": { "text": "Sylas" }
+      }
+    ]
+  }
+}

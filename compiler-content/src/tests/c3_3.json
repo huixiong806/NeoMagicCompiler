@@ -1,0 +1,60 @@
+{
+  "level": "3-3",
+  "language": "asm",
+  "availableOps": ["li", "lw", "sw", "add", "addi", "mul", "blt", "beq", "bne", "j", "jal", "jalr", "ecall"],
+  "forbiddenRegs": [],
+  "maxInstructions": 30000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "三个正整数：3 + 4 + 5 = 12",
+        "input": { "text": "3 4 5" },
+        "output": { "text": "12" },
+        "expected": { "memory": { "0x2000": 12 } }
+      },
+      {
+        "name": "空输入：一个数都没有，总和 0",
+        "input": { "text": "" },
+        "output": { "text": "0" },
+        "expected": { "memory": { "0x2000": 0 } }
+      },
+      {
+        "name": "只有一个数 '7'：总和就是它自己",
+        "input": { "text": "7" },
+        "output": { "text": "7" },
+        "expected": { "memory": { "0x2000": 7 } }
+      },
+      {
+        "name": "多位数：12 + 345 + 6789 = 7146",
+        "input": { "text": "12 345 6789" },
+        "output": { "text": "7146" },
+        "expected": { "memory": { "0x2000": 7146 } }
+      },
+      {
+        "name": "带负号：-8 + 3 = -5，要输出负号",
+        "input": { "text": "-8 3" },
+        "output": { "text": "-5" },
+        "expected": { "memory": { "0x2000": -5 } }
+      },
+      {
+        "name": "正负相消：-100 + 100 = 0",
+        "input": { "text": "-100 100" },
+        "output": { "text": "0" },
+        "expected": { "memory": { "0x2000": 0 } }
+      },
+      {
+        "name": "行尾有换行：10 + -20 + 30 = 20",
+        "input": { "text": "10 -20 30\n" },
+        "output": { "text": "20" },
+        "expected": { "memory": { "0x2000": 20 } }
+      },
+      {
+        "name": "同一行里多个空格隔开：1 + 22 + 333 = 356",
+        "input": { "text": "1   22   333" },
+        "output": { "text": "356" },
+        "expected": { "memory": { "0x2000": 356 } }
+      }
+    ]
+  }
+}

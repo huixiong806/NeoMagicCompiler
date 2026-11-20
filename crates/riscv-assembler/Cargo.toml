@@ -1,0 +1,8 @@
+[package]
+name = "riscv-assembler"
+version = "0.1.0"
+edition = "2021"
+description = "星之语汇编器：汇编文本 → RV32IM 机器码"
+
+[dependencies]
+riscv-simulator = { path = "../riscv-simulator" }

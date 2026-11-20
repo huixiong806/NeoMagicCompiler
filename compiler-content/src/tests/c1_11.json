@@ -1,0 +1,41 @@
+{
+  "level": "1-11",
+  "language": "asm",
+  "availableOps": ["li", "lw", "sw", "add", "addi", "blt", "bge", "j", "ecall"],
+  "forbiddenRegs": [],
+  "maxInstructions": 2000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "n = 1：只加 0x1000 那一格，x10 = 10",
+        "initial": { "regs": { "x1": 1 }, "memory": { "0x1000": 10 } },
+        "expected": { "regs": { "x10": 10 } }
+      },
+      {
+        "name": "n = 3：加 7 + 8 + 9，x10 = 24",
+        "initial": {
+          "regs": { "x1": 3 },
+          "memory": { "0x1000": 7, "0x1004": 8, "0x1008": 9 }
+        },
+        "expected": { "regs": { "x10": 24 } }
+      },
+      {
+        "name": "n = 5：加 1 + 2 + 3 + 4 + 5，x10 = 15",
+        "initial": {
+          "regs": { "x1": 5 },
+          "memory": { "0x1000": 1, "0x1004": 2, "0x1008": 3, "0x100C": 4, "0x1010": 5 }
+        },
+        "expected": { "regs": { "x10": 15 } }
+      },
+      {
+        "name": "n = 3，含 0 与负数：-4 + 0 + 9 = 5",
+        "initial": {
+          "regs": { "x1": 3 },
+          "memory": { "0x1000": -4, "0x1004": 0, "0x1008": 9 }
+        },
+        "expected": { "regs": { "x10": 5 } }
+      }
+    ]
+  }
+}

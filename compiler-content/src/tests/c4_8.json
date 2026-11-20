@@ -1,0 +1,36 @@
+{
+  "level": "4-8",
+  "language": "asm",
+  "availableOps": [
+    "li", "la", "lui", "addi", "add", "sub", "mul", "div", "rem", "remu", "divu",
+    "lw", "sw", "lb", "lbu", "sb",
+    "beq", "bne", "blt", "bge", "bltu", "bgeu", "beqz", "bnez", "j", "jal", "jalr", "ret", "mv", "nop", "ecall"
+  ],
+  "forbiddenRegs": [],
+  "maxInstructions": 200000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "声明后立刻改变量：int x = 3; x = x + 4;",
+        "input": { "text": "int x = 3; x = x + 4;" },
+        "output": { "text": ".data\nx: .word 0\n.text\nmain:\nli a0, 3\nla a1, x\nsw a0, 0(a1)\nla a1, x\nlw a0, 0(a1)\naddi sp, sp, -4\nsw a0, 0(sp)\nli a0, 4\nlw a1, 0(sp)\naddi sp, sp, 4\nadd a0, a1, a0\nla a1, x\nsw a0, 0(a1)\nret\n" }
+      },
+      {
+        "name": "只声明一个变量：int n = 42;",
+        "input": { "text": "int n = 42;" },
+        "output": { "text": ".data\nn: .word 0\n.text\nmain:\nli a0, 42\nla a1, n\nsw a0, 0(a1)\nret\n" }
+      },
+      {
+        "name": "两个变量互相用：int a = 5; int b = a * 2; b = b - a;",
+        "input": { "text": "int a = 5; int b = a * 2; b = b - a;" },
+        "output": { "text": ".data\na: .word 0\nb: .word 0\n.text\nmain:\nli a0, 5\nla a1, a\nsw a0, 0(a1)\nla a1, a\nlw a0, 0(a1)\naddi sp, sp, -4\nsw a0, 0(sp)\nli a0, 2\nlw a1, 0(sp)\naddi sp, sp, 4\nmul a0, a1, a0\nla a1, b\nsw a0, 0(a1)\nla a1, b\nlw a0, 0(a1)\naddi sp, sp, -4\nsw a0, 0(sp)\nla a1, a\nlw a0, 0(a1)\nlw a1, 0(sp)\naddi sp, sp, 4\nsub a0, a1, a0\nla a1, b\nsw a0, 0(a1)\nret\n" }
+      },
+      {
+        "name": "带空白的括号表达式：int z = (2 + 3) * (4 - 1);",
+        "input": { "text": "int z = (2 + 3) * (4 - 1);" },
+        "output": { "text": ".data\nz: .word 0\n.text\nmain:\nli a0, 2\naddi sp, sp, -4\nsw a0, 0(sp)\nli a0, 3\nlw a1, 0(sp)\naddi sp, sp, 4\nadd a0, a1, a0\naddi sp, sp, -4\nsw a0, 0(sp)\nli a0, 4\naddi sp, sp, -4\nsw a0, 0(sp)\nli a0, 1\nlw a1, 0(sp)\naddi sp, sp, 4\nsub a0, a1, a0\nlw a1, 0(sp)\naddi sp, sp, 4\nmul a0, a1, a0\nla a1, z\nsw a0, 0(a1)\nret\n" }
+      }
+    ]
+  }
+}

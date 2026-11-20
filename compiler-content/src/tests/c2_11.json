@@ -1,0 +1,42 @@
+{
+  "level": "2-11",
+  "language": "c",
+  "availableOps": [],
+  "forbiddenRegs": [],
+  "maxInstructions": 5000000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "n = 0：一个素数也没有（边界）",
+        "call": { "fn": "solve", "args": [0] },
+        "expected": { "ret": 0 }
+      },
+      {
+        "name": "n = 1：1 不算素数（边界）",
+        "call": { "fn": "solve", "args": [1] },
+        "expected": { "ret": 0 }
+      },
+      {
+        "name": "n = 2：只有 2（边界）",
+        "call": { "fn": "solve", "args": [2] },
+        "expected": { "ret": 1 }
+      },
+      {
+        "name": "10 以内有 4 个素数（2 3 5 7）",
+        "call": { "fn": "solve", "args": [10] },
+        "expected": { "ret": 4 }
+      },
+      {
+        "name": "100 以内有 25 个素数",
+        "call": { "fn": "solve", "args": [100] },
+        "expected": { "ret": 25 }
+      },
+      {
+        "name": "200 以内有 46 个素数（筛子铺满）",
+        "call": { "fn": "solve", "args": [200] },
+        "expected": { "ret": 46 }
+      }
+    ]
+  }
+}

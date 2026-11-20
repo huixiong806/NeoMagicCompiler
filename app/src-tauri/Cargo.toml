@@ -1,0 +1,29 @@
+[package]
+name = "neomagiccompiler"
+version = "0.1.0"
+description = "Neo Magic Compiler — a modern compiler-building education game"
+authors = ["orangebird"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "neomagiccompiler_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+riscv-simulator = { path = "../../crates/riscv-simulator" }
+# 领域层：关卡加载 / 运行器 / 判定器 / 存档。
+# 打开 embedded-content：关卡内容在编译期嵌进二进制，装好的游戏不依赖仓库目录。
+neomagic-core = { path = "../../crates/neomagic-core", features = ["embedded-content"] }
+

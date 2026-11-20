@@ -1,0 +1,8 @@
+[package]
+name = "riscv-simulator"
+version = "0.2.0"
+edition = "2021"
+description = "RV32IM 模拟器（魔导引擎）—— 框架无关的纯逻辑库"
+
+[dependencies]
+thiserror = "2"

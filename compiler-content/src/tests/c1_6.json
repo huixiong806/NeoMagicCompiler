@@ -1,0 +1,27 @@
+{
+  "level": "1-6",
+  "language": "asm",
+  "availableOps": ["li", "addi", "sw", "ecall"],
+  "forbiddenRegs": [],
+  "maxInstructions": 1000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "三块牌子：0x1000=1、0x1004=2、0x1008=3",
+        "initial": { "regs": {} },
+        "expected": { "memory": { "0x1000": 1, "0x1004": 2, "0x1008": 3 } }
+      },
+      {
+        "name": "换一组初始内容也不能漏写（先铺满再被覆盖）",
+        "initial": { "regs": {}, "memory": { "0x1000": 99, "0x1004": 99, "0x1008": 99 } },
+        "expected": { "memory": { "0x1000": 1, "0x1004": 2, "0x1008": 3 } }
+      },
+      {
+        "name": "三个格子必须各写各的，不能都写同一个地址",
+        "initial": { "regs": {}, "memory": { "0x1004": 777, "0x1008": 777 } },
+        "expected": { "memory": { "0x1000": 1, "0x1004": 2, "0x1008": 3 } }
+      }
+    ]
+  }
+}

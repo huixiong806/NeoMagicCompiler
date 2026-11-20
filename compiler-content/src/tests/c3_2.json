@@ -1,0 +1,54 @@
+{
+  "level": "3-2",
+  "language": "asm",
+  "availableOps": ["li", "lw", "lb", "sb", "sw", "addi", "divu", "remu", "blt", "ble", "beq", "bne", "j", "jal", "jalr", "ecall"],
+  "forbiddenRegs": [],
+  "maxInstructions": 30000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "一句混合的话：2 个数字、4 个字母、3 个其他（含空格和换行）",
+        "input": { "text": "ab12 cd!\n" },
+        "output": { "text": "2\n4\n3" },
+        "expected": { "memory": { "0x2000": 2, "0x2004": 4, "0x2008": 3 } }
+      },
+      {
+        "name": "空输入：三个计数都是 0，也要各打印一个 0",
+        "input": { "text": "" },
+        "output": { "text": "0\n0\n0" },
+        "expected": { "memory": { "0x2000": 0, "0x2004": 0, "0x2008": 0 } }
+      },
+      {
+        "name": "只有标点和空格：0 个数字、0 个字母，其他 5 个",
+        "input": { "text": "  !?." },
+        "output": { "text": "0\n0\n5" },
+        "expected": { "memory": { "0x2000": 0, "0x2004": 0, "0x2008": 5 } }
+      },
+      {
+        "name": "数字和字母接在一起：10 个数字、6 个字母",
+        "input": { "text": "0123456789abcdef" },
+        "output": { "text": "10\n6\n0" },
+        "expected": { "memory": { "0x2000": 10, "0x2004": 6, "0x2008": 0 } }
+      },
+      {
+        "name": "大小写都算字母，中间的 [ 和 _ 是其他：2 个字母、2 个其他",
+        "input": { "text": "aZ[_" },
+        "output": { "text": "0\n2\n2" },
+        "expected": { "memory": { "0x2000": 0, "0x2004": 2, "0x2008": 2 } }
+      },
+      {
+        "name": "9 和 A 中间的空档不算字母：1 个数字、1 个字母、6 个其他",
+        "input": { "text": "9:;<=>?A" },
+        "output": { "text": "1\n1\n6" },
+        "expected": { "memory": { "0x2000": 1, "0x2004": 1, "0x2008": 6 } }
+      },
+      {
+        "name": "单个空格：其他字符 1 个（空格也是字符）",
+        "input": { "text": " " },
+        "output": { "text": "0\n0\n1" },
+        "expected": { "memory": { "0x2000": 0, "0x2004": 0, "0x2008": 1 } }
+      }
+    ]
+  }
+}

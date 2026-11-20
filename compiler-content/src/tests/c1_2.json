@@ -1,0 +1,27 @@
+{
+  "level": "1-2",
+  "language": "asm",
+  "availableOps": ["addi", "ecall"],
+  "forbiddenRegs": [],
+  "maxInstructions": 1000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "5 + 7 = 12",
+        "initial": { "regs": { "x1": 5 } },
+        "expected": { "regs": { "x2": 12 } }
+      },
+      {
+        "name": "0 + 7 = 7（x1 是空槽）",
+        "initial": { "regs": { "x1": 0 } },
+        "expected": { "regs": { "x2": 7 } }
+      },
+      {
+        "name": "-100 + 7 = -93（x1 是负数）",
+        "initial": { "regs": { "x1": -100 } },
+        "expected": { "regs": { "x2": -93 } }
+      }
+    ]
+  }
+}

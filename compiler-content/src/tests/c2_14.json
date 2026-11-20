@@ -1,0 +1,66 @@
+{
+  "level": "2-14",
+  "language": "c",
+  "availableOps": [],
+  "forbiddenRegs": [],
+  "maxInstructions": 200000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "刚好分完：[3, 2, 1] 配 9 点预算 → 1（每种都刚好到顶）",
+        "call": { "fn": "solve", "args": [8192, 3, 9] },
+        "initial": { "0x2000": [3, 2, 1] },
+        "expected": { "ret": 1 }
+      },
+      {
+        "name": "[3, 2, 1] 配 10 点预算 → 0（多出 1 点没处放）",
+        "call": { "fn": "solve", "args": [8192, 3, 10] },
+        "initial": { "0x2000": [3, 2, 1] },
+        "expected": { "ret": 0 }
+      },
+      {
+        "name": "分满后还剩一点：[3, 2, 1] 配 11 点预算 → 0",
+        "call": { "fn": "solve", "args": [8192, 3, 11] },
+        "initial": { "0x2000": [3, 2, 1] },
+        "expected": { "ret": 0 }
+      },
+      {
+        "name": "连底价都给不起：[5, 5] 配 1 点预算 → 0（边界）",
+        "call": { "fn": "solve", "args": [8192, 2, 1] },
+        "initial": { "0x2000": [5, 5] },
+        "expected": { "ret": 0 }
+      },
+      {
+        "name": "空配方、零预算：n = 0，budget = 0 → 1（边界）",
+        "call": { "fn": "solve", "args": [8192, 0, 0] },
+        "initial": { "0x2000": [0] },
+        "expected": { "ret": 1 }
+      },
+      {
+        "name": "只够底价、一点也加不动：[1, 1, 1] 配 3 点 → 1（边界）",
+        "call": { "fn": "solve", "args": [8192, 3, 3] },
+        "initial": { "0x2000": [1, 1, 1] },
+        "expected": { "ret": 1 }
+      },
+      {
+        "name": "第一种就吃光剩余：[6, 1] 配 9 点 → 1",
+        "call": { "fn": "solve", "args": [8192, 2, 9] },
+        "initial": { "0x2000": [6, 1] },
+        "expected": { "ret": 1 }
+      },
+      {
+        "name": "另一种配方刚好分完：[2, 3, 1] 配 9 点预算 → 1",
+        "call": { "fn": "solve", "args": [12288, 3, 9] },
+        "initial": { "0x3000": [2, 3, 1] },
+        "expected": { "ret": 1 }
+      },
+      {
+        "name": "同一种配方多 1 点预算：[2, 3, 1] 配 10 点 → 0",
+        "call": { "fn": "solve", "args": [12288, 3, 10] },
+        "initial": { "0x3000": [2, 3, 1] },
+        "expected": { "ret": 0 }
+      }
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+[workspace]
+resolver = "3"
+members = [
+    "app/src-tauri",
+    "crates/neomagic-core",
+    "crates/riscv-assembler",
+    "crates/riscv-simulator",
+    "crates/starlang",
+]

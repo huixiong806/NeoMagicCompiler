@@ -1,0 +1,42 @@
+{
+  "level": "2-4",
+  "language": "c",
+  "availableOps": [],
+  "forbiddenRegs": [],
+  "maxInstructions": 200000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "最大值 9 在第 2 位：[5, 1, 9, 3]",
+        "call": { "fn": "solve", "args": [8192, 4] },
+        "initial": { "0x2000": [5, 1, 9, 3] },
+        "expected": { "ret": 2 }
+      },
+      {
+        "name": "最大值在最后一颗：[2, 2, 8]",
+        "call": { "fn": "solve", "args": [8192, 3] },
+        "initial": { "0x2000": [2, 2, 8] },
+        "expected": { "ret": 2 }
+      },
+      {
+        "name": "并列最大时取最小的下标：[4, 4, 4]（边界）",
+        "call": { "fn": "solve", "args": [8192, 3] },
+        "initial": { "0x2000": [4, 4, 4] },
+        "expected": { "ret": 0 }
+      },
+      {
+        "name": "只有一块石头：[7]（边界）",
+        "call": { "fn": "solve", "args": [8192, 1] },
+        "initial": { "0x2000": [7] },
+        "expected": { "ret": 0 }
+      },
+      {
+        "name": "含负数的数组，最大值在第 0 位：[0, -5, -8, -4, -2]",
+        "call": { "fn": "solve", "args": [8192, 5] },
+        "initial": { "0x2000": [0, -5, -8, -4, -2] },
+        "expected": { "ret": 0 }
+      }
+    ]
+  }
+}

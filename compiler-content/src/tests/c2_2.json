@@ -1,0 +1,37 @@
+{
+  "level": "2-2",
+  "language": "c",
+  "availableOps": [],
+  "forbiddenRegs": [],
+  "maxInstructions": 200000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "第二个数大：max(3, 7)",
+        "call": { "fn": "solve", "args": [3, 7] },
+        "expected": { "ret": 7 }
+      },
+      {
+        "name": "第一个数大：max(7, 3)",
+        "call": { "fn": "solve", "args": [7, 3] },
+        "expected": { "ret": 7 }
+      },
+      {
+        "name": "两个数相等：max(5, 5)（边界）",
+        "call": { "fn": "solve", "args": [5, 5] },
+        "expected": { "ret": 5 }
+      },
+      {
+        "name": "两个都是负数：max(-8, -3)",
+        "call": { "fn": "solve", "args": [-8, -3] },
+        "expected": { "ret": -3 }
+      },
+      {
+        "name": "一个为零：max(0, -1)",
+        "call": { "fn": "solve", "args": [0, -1] },
+        "expected": { "ret": 0 }
+      }
+    ]
+  }
+}

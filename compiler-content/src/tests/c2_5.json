@@ -1,0 +1,36 @@
+{
+  "level": "2-5",
+  "language": "c",
+  "availableOps": [],
+  "forbiddenRegs": [],
+  "maxInstructions": 200000,
+  "goal": {
+    "type": "static",
+    "tests": [
+      {
+        "name": "交换 5 和 3：0x2000 与 0x2004",
+        "call": { "fn": "solve", "args": [8192, 8196] },
+        "initial": { "0x2000": 5, "0x2004": 3 },
+        "expected": { "0x2000": 3, "0x2004": 5 }
+      },
+      {
+        "name": "交换 1 和 100：另一对地址 0x3000 与 0x3010",
+        "call": { "fn": "solve", "args": [12288, 12304] },
+        "initial": { "0x3000": 1, "0x3010": 100 },
+        "expected": { "0x3000": 100, "0x3010": 1 }
+      },
+      {
+        "name": "含 0：交换 42 和 0（边界）",
+        "call": { "fn": "solve", "args": [8192, 8196] },
+        "initial": { "0x2000": 42, "0x2004": 0 },
+        "expected": { "0x2000": 0, "0x2004": 42 }
+      },
+      {
+        "name": "含负数：交换 -7 和 7（边界）",
+        "call": { "fn": "solve", "args": [8192, 8196] },
+        "initial": { "0x2000": -7, "0x2004": 7 },
+        "expected": { "0x2000": 7, "0x2004": -7 }
+      }
+    ]
+  }
+}
